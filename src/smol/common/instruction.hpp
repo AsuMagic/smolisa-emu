@@ -1,8 +1,8 @@
 #pragma once
 
-#include "masks.hpp"
-#include "registers.hpp"
-#include "types.hpp"
+#include <smol/common/masks.hpp>
+#include <smol/common/registers.hpp>
+#include <smol/common/types.hpp>
 
 #include <array>
 

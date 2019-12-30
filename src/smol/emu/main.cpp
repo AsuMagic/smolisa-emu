@@ -1,4 +1,4 @@
-#include "core.hpp"
+#include <smol/emu/core.hpp>
 
 #include <algorithm>
 #include <fmt/core.h>

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "memory.hpp"
-#include "registers.hpp"
+#include <smol/common/registers.hpp>
+#include <smol/emu/memory.hpp>
 
 #include <array>
 #include <optional>

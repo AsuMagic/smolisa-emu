@@ -1,6 +1,6 @@
 #pragma once
 
-#include "types.hpp"
+#include <smol/common/types.hpp>
 
 enum class RegisterId : Byte
 {

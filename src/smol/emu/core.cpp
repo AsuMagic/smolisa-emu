@@ -1,7 +1,7 @@
 #include "core.hpp"
 
-#include "instruction.hpp"
-#include "opcodes.hpp"
+#include <smol/common/instruction.hpp>
+#include <smol/common/opcodes.hpp>
 
 #include <fmt/core.h>
 #include <iostream>

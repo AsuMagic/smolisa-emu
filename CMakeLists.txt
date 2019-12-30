@@ -5,9 +5,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(smolisa-emu)
 add_executable(${PROJECT_NAME}
-	"main.cpp"
-	"core.cpp"
-	"memory.cpp"
+        "src/smol/emu/main.cpp"
+	"src/smol/emu/core.cpp"
+	"src/smol/emu/memory.cpp"
 )
+
+target_include_directories(${PROJECT_NAME} PRIVATE "src/")
 
 target_link_libraries(${PROJECT_NAME} PRIVATE fmt)
