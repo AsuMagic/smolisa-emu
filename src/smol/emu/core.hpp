@@ -23,8 +23,10 @@ struct Core
 	std::optional<Word> current_instruction;
 	Mmu                 mmu;
 
+	std::function<void(Core&)> panic_handler;
+
 	void dispatch();
 	void boot();
 
-	void dump_state();
+	std::string debug_state() const;
 };

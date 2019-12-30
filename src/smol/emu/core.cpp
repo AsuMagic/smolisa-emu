@@ -162,25 +162,19 @@ void Core::dispatch()
 
 void Core::boot()
 {
-	try
+	for (;;)
 	{
-		for (;;)
-		{
-			current_instruction.reset();
-			dispatch();
-			// dump_state();
-		}
-	}
-	catch (const std::exception& e) // TODO: custom exception
-	{
-		fmt::print(stderr, "Emulator caught on fire: {}\n", e.what());
-		dump_state();
+		current_instruction.reset();
+		dispatch();
+		// dump_state();
 	}
 }
 
-void Core::dump_state()
+std::string Core::debug_state() const
 {
-	fmt::print(stderr, "\nRegister dump:\n");
+	std::string ret;
+
+	ret += "\nRegister dump:\n";
 	for (std::size_t i = 0; i < RegisterFile::register_count; ++i)
 	{
 		// IIFE
@@ -192,18 +186,20 @@ void Core::dump_state()
 			}
 		}();
 
-		fmt::print(stderr, "${:<5}: {:#06x}\n", name, registers[RegisterId(i)]);
+		ret += fmt::format("${:<5}: {:#06x}\n", name, registers[RegisterId(i)]);
 	}
 
-	fmt::print(stderr, "Instruction pointer: {:#06x}\n", instruction_pointer);
+	ret += fmt::format("Instruction pointer: {:#06x}\n", instruction_pointer);
 
 	if (current_instruction)
 	{
-		fmt::print(stderr, "Current instruction: {:#06x}\n", *current_instruction);
+		ret += fmt::format("Current instruction: {:#06x}\n", *current_instruction);
 		// TODO: disasm
 	}
 	else
 	{
-		fmt::print(stderr, "No instruction could be read");
+		ret += fmt::format("No instruction could be read");
 	}
+
+	return ret;
 }

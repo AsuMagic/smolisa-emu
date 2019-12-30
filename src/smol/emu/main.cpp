@@ -1,4 +1,5 @@
 #include <smol/emu/core.hpp>
+#include <smol/emu/framebuffer/framebuffer.hpp>
 
 #include <algorithm>
 #include <fmt/core.h>
@@ -74,9 +75,34 @@ int main(int argc, char** argv)
 	// Copy ROM contents to beginning of RAM
 	std::copy_n(rom.begin(), std::min(rom.size(), core.mmu.ram.size()), core.mmu.ram.begin());
 
-	core.mmu.mmio_write_callback
-		= [](Addr addr, Byte byte) { fmt::print(stderr, "MMIO write @{:#06x}: {:#04x}\n", addr, byte); };
+	fmt::print(stderr, "Preparing 80x25 standard framebuffer\n");
+	FrameBuffer fb;
+
+	core.mmu.mmio_write_callback = [&](Addr addr, Byte byte) {
+		fmt::print(stderr, "MMIO write @{:#06x}: {:#04x}\n", addr, byte);
+		fb.set_byte(addr, byte);
+	};
+
+	core.mmu.mmio_read_callback = [&](Addr addr) -> Byte {
+		fmt::print(stderr, "MMIO read @{:#06x}\n", addr);
+		return fb.get_byte(addr).value_or(0);
+	};
 
 	core.instruction_pointer = 0x0000;
-	core.boot();
+	fmt::print(stderr, "Booting CPU at {:#06x}\n", core.instruction_pointer);
+
+	try
+	{
+		core.boot();
+	}
+	catch (const std::exception& e)
+	{
+		const std::string error = fmt::format("Emulator caught fire: {}\n{}\n", e.what(), core.debug_state());
+
+		fb.display_simple_string(error, 0, 1);
+		fmt::print(stderr, "{}", error);
+	}
+
+	while (fb.display())
+		;
 }
