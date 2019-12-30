@@ -131,6 +131,7 @@ void FrameBuffer::display_simple_string(std::string_view s, std::size_t origin_x
 
 	for (std::size_t i = 0; i < s.size(); ++i)
 	{
+		// Jump on newlines
 		if (s[i] == '\n')
 		{
 			++y;
@@ -138,12 +139,14 @@ void FrameBuffer::display_simple_string(std::string_view s, std::size_t origin_x
 			continue;
 		}
 
+		// Loop back to the left
 		if (x >= width)
 		{
 			++y;
 			x = 0;
 		}
 
+		// Loop back to the top... meh
 		if (y >= height)
 		{
 			y = 0;
