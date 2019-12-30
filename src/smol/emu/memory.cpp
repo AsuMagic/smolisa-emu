@@ -33,7 +33,7 @@ std::size_t Mmu::ram_offset(Addr addr) const
 		{
 			throw std::runtime_error{fmt::format(
 				"Attempted illegal byte access at address {:#06x}: tried "
-				"addressing invalid bank\n",
+				"addressing invalid bank",
 				addr)};
 		}
 

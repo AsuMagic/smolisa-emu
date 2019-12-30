@@ -97,7 +97,7 @@ int main(int argc, char** argv)
 	}
 	catch (const std::exception& e)
 	{
-		const std::string error = fmt::format("Emulator caught fire: {}\n{}\n", e.what(), core.debug_state());
+		const std::string error = fmt::format("Emulator caught fire: {}{}\n", e.what(), core.debug_state());
 
 		fb.display_simple_string(error, 0, 1);
 		fmt::print(stderr, "{}", error);
