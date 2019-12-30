@@ -270,7 +270,7 @@ int main(int argc, char** argv)
 		std::visit(
 			overloaded{unexpected_fallback,
 					   [&](tokens::Label label) {
-						   label_uses.push_back({current_offset, label.name});
+						   label_uses.push_back({current_offset + 1, label.name});
 					   },
 					   [&](tokens::Immediate immediate) { byte = immediate.value; }},
 			tokenizer.consume_token());
@@ -322,8 +322,10 @@ int main(int argc, char** argv)
 		}
 		}
 
+		// TODO: just an emit function
 		output.push_back(instruction);
 		output.push_back(instruction >> 8);
+		current_offset += 2;
 	};
 
 	// hax
@@ -344,7 +346,8 @@ int main(int argc, char** argv)
 	{
 		for (const auto& label : label_uses)
 		{
-			fmt::print(stderr, "Patching label use '{}'\n", label.name);
+			fmt::print(
+				stderr, "Patching label use '{}' @{} => {}\n", label.name, label.override_offset, decl.override_offset);
 
 			if (label.name == decl.name)
 			{
