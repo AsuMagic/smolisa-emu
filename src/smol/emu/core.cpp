@@ -186,7 +186,7 @@ std::string Core::debug_state() const
 			}
 		}();
 
-		ret += fmt::format("${:<5}: {:#06x}\n", name, registers[RegisterId(i)]);
+		ret += fmt::format("${:<4}: {:#06x}\n", name, registers[RegisterId(i)]);
 	}
 
 	ret += fmt::format("Instruction pointer: {:#06x}\n", instruction_pointer);
