@@ -31,8 +31,8 @@ FrameBuffer::FrameBuffer(FrameBufferConfig config) :
 
 	m_font.loadFromFile(std::string{config.font_path});
 
-	m_glyph_width  = m_font.getSize().x / 128;
-	m_glyph_height = m_font.getSize().y / 2;
+	m_glyph_width  = m_font.getSize().x / 256;
+	m_glyph_height = m_font.getSize().y;
 
 	m_image.create(width * m_glyph_width, height * m_glyph_height);
 
