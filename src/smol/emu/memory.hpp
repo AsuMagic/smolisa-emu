@@ -30,7 +30,7 @@ struct Mmu
 	std::function<Byte(Addr)>       mmio_read_callback;
 	std::function<void(Addr, Byte)> mmio_write_callback;
 
-	Mmu(std::size_t bank_count = 1);
+	Mmu(std::size_t bank_count = 128);
 
 	Bank set_current_bank(Bank new_bank);
 

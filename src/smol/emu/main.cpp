@@ -67,7 +67,7 @@ int main(int argc, char** argv)
 		fmt::print(
 			stderr,
 			"Memory initialization file '{}' ({} bytes) does not fit within the 8KiB of system memory.\n"
-			"This means that data may be copied over to pages the software has to enable to get access to.",
+			"This means that data may be copied over to pages the software has to enable to get access to.\n",
 			rom_path,
 			rom.size());
 	}
@@ -79,7 +79,7 @@ int main(int argc, char** argv)
 	FrameBuffer fb;
 
 	core.mmu.mmio_write_callback = [&](Addr addr, Byte byte) {
-		fmt::print(stderr, "MMIO write @{:#06x}: {:#04x}\n", addr, byte);
+		// fmt::print(stderr, "MMIO write @{:#06x}: {:#04x}\n", addr, byte);
 		fb.set_byte(addr, byte);
 	};
 

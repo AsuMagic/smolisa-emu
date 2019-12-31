@@ -19,6 +19,7 @@ class FrameBuffer
 	{
 		FrameData,
 		PaletteData,
+		VsyncWait,
 		Invalid
 	};
 

@@ -45,6 +45,7 @@ std::size_t Mmu::ram_offset(Addr addr) const
 
 		default:
 		{
+			// fmt::print(stderr, "bk read @{:#06x}\n", addr);
 			return addr + (std::size_t(current_bank) - std::size_t(Bank::UserBegin)) * bank_memory_size;
 		}
 		}

@@ -49,6 +49,16 @@ struct Immediate
 	Byte value;
 };
 
+struct SelectOffset
+{
+	std::size_t addr;
+};
+
+struct IncludeBinaryFile
+{
+	std::string_view path;
+};
+
 struct Newline
 {};
 
@@ -62,6 +72,8 @@ using Token = std::variant<
 	tokens::RegisterReference,
 	tokens::Label,
 	tokens::Immediate,
+	tokens::SelectOffset,
+	tokens::IncludeBinaryFile,
 	tokens::Colon,
 	tokens::Newline,
 	tokens::Eof>;
@@ -71,7 +83,8 @@ constexpr bool is_alpha(char c) { return (c >= 'a' && c <= 'z') || (c >= 'A' && 
 constexpr bool is_num(char c) { return c >= '0' && c <= '9'; }
 constexpr bool is_newline(char c) { return c == '\n'; }
 
-constexpr bool is_identifier(char c) { return is_alpha(c) || is_num(c); }
+constexpr bool is_identifier_begin(char c) { return is_alpha(c) || c == '_'; }
+constexpr bool is_identifier(char c) { return is_identifier_begin(c) || is_num(c); }
 
 class Tokenizer
 {
@@ -111,6 +124,29 @@ class Tokenizer
 			return {&*token_begin_it, std::size_t(std::distance(token_begin_it, m_it))};
 		};
 
+		if (m_last == '@')
+		{
+			while (is_num(read()))
+				;
+
+			auto offset_string = token_string();
+			offset_string.remove_prefix(1);
+
+			// TODO: handle binary and hex
+			return tokens::SelectOffset{std::stoull(std::string{offset_string})};
+		}
+
+		if (m_last == '#')
+		{
+			while (!is_newline(read()) && m_it != m_source.end())
+				;
+
+			auto offset_string = token_string();
+			offset_string.remove_prefix(1);
+
+			return tokens::IncludeBinaryFile{offset_string};
+		}
+
 		if (m_last == '\'')
 		{
 			const char ascii = read();
@@ -123,7 +159,7 @@ class Tokenizer
 			return std::monostate{};
 		}
 
-		if (is_alpha(m_last) || m_last == '$')
+		if (is_identifier_begin(m_last) || m_last == '$')
 		{
 			while (is_identifier(read()))
 				;
@@ -233,17 +269,18 @@ int main(int argc, char** argv)
 	auto      source = load_file_raw(args[0]);
 	Tokenizer tokenizer{source.data()};
 
+	std::vector<Label> label_uses, label_declarations;
+	std::vector<Byte>  output;
+
+	std::size_t current_offset = 0;
+
 	const auto name_of = [](const Token& token) -> std::string_view {
 		return std::array{
 			"unknown", "mnemonic", "register", "label", "immediate", "colon", "newline", "eof"}[token.index()];
 	};
 
-	const auto unexpected_fallback = [](auto) { throw std::runtime_error{fmt::format("Unexpected token")}; };
-
-	std::vector<Label> label_uses, label_declarations;
-	std::vector<Byte>  output;
-
-	std::size_t current_offset = 0;
+	const auto unexpected_fallback
+		= [&](auto) { throw std::runtime_error{fmt::format("Unexpected token, current offset = {}", current_offset)}; };
 
 	const auto handle_label_declaration = [&](tokens::Label decl) {
 		std::visit(
@@ -328,6 +365,18 @@ int main(int argc, char** argv)
 		current_offset += 2;
 	};
 
+	// TODO: allow setting the offset in the past
+	const auto handle_select_offset = [&](tokens::SelectOffset offset) {
+		current_offset = offset.addr;
+		output.resize(current_offset);
+	};
+
+	const auto handle_binary_include = [&](tokens::IncludeBinaryFile include) {
+		const auto content = load_file_raw(include.path);
+		output.insert(output.end(), content.begin(), content.end());
+		current_offset += content.size();
+	};
+
 	// hax
 	bool done = false;
 
@@ -337,6 +386,8 @@ int main(int argc, char** argv)
 			overloaded{unexpected_fallback,
 					   handle_instruction,
 					   handle_label_declaration,
+					   handle_select_offset,
+					   handle_binary_include,
 					   [](tokens::Newline) {},
 					   [&](tokens::Eof) { done = true; }},
 			tokenizer.consume_token());
@@ -356,11 +407,11 @@ int main(int argc, char** argv)
 		}
 	}
 
-	if (!label_uses.empty())
+	/*if (!label_uses.empty())
 	{
 		// TODO: show which
-		fmt::print(stderr, "Missing labels");
-	}
+		fmt::print(stderr, "Missing labels\n");
+	}*/
 
 	output.push_back(0xFF);
 	output.push_back(0xFF);
@@ -369,6 +420,10 @@ int main(int argc, char** argv)
 	{
 		std::cout.put(b);
 	}
+
+	// TODO: allow to put raw bytes
+	// TODO: less shit syntax errors (use name_of at least or something, wrap std::visit and overloaded)
+	// TODO: split that crap up
 
 #warning TODO allowing to load low and high bits of address!!
 }

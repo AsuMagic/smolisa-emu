@@ -38,6 +38,7 @@ FrameBuffer::FrameBuffer(FrameBufferConfig config) :
 
 	m_window.create(sf::VideoMode{m_image.getSize().x, m_image.getSize().y}, "smolisa framebuffer");
 	m_window.setVerticalSyncEnabled(true);
+	m_window.setFramerateLimit(30);
 
 	clear();
 	rebuild();
@@ -162,14 +163,19 @@ void FrameBuffer::display_simple_string(std::string_view s, std::size_t origin_x
 
 FrameBuffer::Region FrameBuffer::byte_region(Addr addr) const
 {
-	if (addr >= 0x0000 && addr <= 0x2F9F)
+	if (addr >= 0x0000 && addr <= 0x0F9F)
 	{
 		return Region::FrameData;
 	}
 
-	if (addr >= 0x2FA0 && addr <= 0x2FCF)
+	if (addr >= 0x0FA0 && addr <= 0x0FCF)
 	{
 		return Region::PaletteData;
+	}
+
+	if (addr == 0x0FD0)
+	{
+		return Region::VsyncWait;
 	}
 
 	return Region::Invalid;
@@ -197,6 +203,12 @@ void FrameBuffer::set_byte(Addr addr, Byte byte)
 		break;
 	}
 
+	case Region::VsyncWait:
+	{
+		display();
+		break;
+	}
+
 	default:
 	case Region::Invalid: return;
 	}
@@ -208,7 +220,7 @@ std::optional<Byte> FrameBuffer::get_byte(Addr addr) const
 	{
 	case Region::FrameData: return m_character_data[addr - base_address];
 	case Region::PaletteData: return m_palette_data[addr - palette_address];
-	default:
+	case Region::VsyncWait:
 	case Region::Invalid: return std::nullopt;
 	}
 }

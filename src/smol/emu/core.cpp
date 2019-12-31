@@ -166,7 +166,10 @@ void Core::boot()
 	{
 		current_instruction.reset();
 		dispatch();
-		// dump_state();
+
+		/*fmt::print(stderr, "\n{}\n", debug_state());
+		char c;
+		std::cin >> c;*/
 	}
 }
 
