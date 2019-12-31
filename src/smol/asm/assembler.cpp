@@ -57,7 +57,7 @@ bool Assembler::link_labels()
 	{
 		if (!decl.used)
 		{
-			diagnostic(context, "Unused label '{}'\n", decl.name);
+			diagnostic(decl.context, "Unused label '{}'\n", decl.name);
 		}
 	}
 
@@ -65,7 +65,7 @@ bool Assembler::link_labels()
 	{
 		if (!label.overriden)
 		{
-			diagnostic(context, "Label usage '{}' has no matching definition\n", label.name);
+			diagnostic(label.context, "Label usage '{}' has no matching definition\n", label.name);
 			fatal = true;
 		}
 	}
