@@ -58,7 +58,7 @@ class FrameBuffer
 
 	Region byte_region(Addr a) const;
 
-	void                set_byte(Addr a, Byte b);
+	bool                set_byte(Addr a, Byte b);
 	std::optional<Byte> get_byte(Addr a) const;
 
 	private:

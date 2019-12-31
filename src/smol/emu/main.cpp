@@ -79,13 +79,21 @@ int main(int argc, char** argv)
 	FrameBuffer fb;
 
 	core.mmu.mmio_write_callback = [&](Addr addr, Byte byte) {
-		// fmt::print(stderr, "MMIO write @{:#06x}: {:#04x}\n", addr, byte);
-		fb.set_byte(addr, byte);
+		if (!fb.set_byte(addr, byte))
+		{
+			throw std::runtime_error{fmt::format("Illegal MMIO write @{:#06x}: {:#04x}\n", addr, byte)};
+		}
 	};
 
 	core.mmu.mmio_read_callback = [&](Addr addr) -> Byte {
-		fmt::print(stderr, "MMIO read @{:#06x}\n", addr);
-		return fb.get_byte(addr).value_or(0);
+		try
+		{
+			return fb.get_byte(addr).value();
+		}
+		catch (const std::exception& e)
+		{
+			throw std::runtime_error{fmt::format("Illegal MMIO read @{:#06x}\n", addr)};
+		}
 	};
 
 	core.instruction_pointer = 0x0000;

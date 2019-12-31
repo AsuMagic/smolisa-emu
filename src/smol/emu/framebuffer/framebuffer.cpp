@@ -181,7 +181,7 @@ FrameBuffer::Region FrameBuffer::byte_region(Addr addr) const
 	return Region::Invalid;
 }
 
-void FrameBuffer::set_byte(Addr addr, Byte byte)
+bool FrameBuffer::set_byte(Addr addr, Byte byte)
 {
 	switch (byte_region(addr))
 	{
@@ -193,24 +193,24 @@ void FrameBuffer::set_byte(Addr addr, Byte byte)
 		const std::size_t x = pixel_index % width, y = pixel_index / width;
 		update_char(get_char(x, y), x, y);
 
-		break;
+		return true;
 	}
 
 	case Region::PaletteData:
 	{
 		m_palette_data[addr - palette_address] = byte;
 		rebuild();
-		break;
+		return true;
 	}
 
 	case Region::VsyncWait:
 	{
 		display();
-		break;
+		return true;
 	}
 
 	default:
-	case Region::Invalid: return;
+	case Region::Invalid: return false;
 	}
 }
 
