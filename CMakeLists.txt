@@ -20,7 +20,9 @@ target_link_libraries(smolisa-emu PRIVATE
 )
 
 add_executable(smolisa-as
+    "src/smol/asm/assembler.cpp"
     "src/smol/asm/main.cpp"
+    "src/smol/asm/tokenizer.cpp"
 )
 
 target_include_directories(smolisa-as PRIVATE "src/")
