@@ -230,10 +230,26 @@ class Tokenizer
 	char m_last = '\0';
 };
 
-struct Label
+struct Context
 {
-	std::size_t      override_offset;
+	std::size_t line = 1;
+};
+
+struct LabelUsage
+{
+	Context          context;
 	std::string_view name;
+	std::size_t      byte_to_override_offset; //!< Offset of the byte to override in the program
+	std::size_t bit_offset = 0; //!< Offset of the byte to copy (e.g. 8 to get the 8 upper bits of a 16-bit address)
+	bool        overriden  = false;
+};
+
+struct LabelDefinition
+{
+	Context          context;
+	std::string_view name;
+	std::size_t      address;
+	std::size_t      used = false;
 };
 
 std::vector<char> load_file_raw(std::string_view path)
@@ -269,15 +285,18 @@ int main(int argc, char** argv)
 	auto      source = load_file_raw(args[0]);
 	Tokenizer tokenizer{source.data()};
 
-	std::vector<Label> label_uses, label_declarations;
-	std::vector<Byte>  output;
+	std::vector<LabelUsage>      label_uses;
+	std::vector<LabelDefinition> label_definitions;
+	std::vector<Byte>            output;
 
 	std::size_t current_offset = 0;
 
-	const auto name_of = [](const Token& token) -> std::string_view {
+	Context context;
+
+	/*const auto name_of = [](const Token& token) -> std::string_view {
 		return std::array{
 			"unknown", "mnemonic", "register", "label", "immediate", "colon", "newline", "eof"}[token.index()];
-	};
+	};*/
 
 	const auto unexpected_fallback
 		= [&](auto) { throw std::runtime_error{fmt::format("Unexpected token, current offset = {}", current_offset)}; };
@@ -286,7 +305,7 @@ int main(int argc, char** argv)
 		std::visit(
 			overloaded{unexpected_fallback,
 					   [&](tokens::Colon) {
-						   label_declarations.push_back({current_offset, decl.name});
+						   label_definitions.push_back({context, decl.name, current_offset});
 					   }},
 			tokenizer.consume_token());
 	};
@@ -307,7 +326,7 @@ int main(int argc, char** argv)
 		std::visit(
 			overloaded{unexpected_fallback,
 					   [&](tokens::Label label) {
-						   label_uses.push_back({current_offset + 1, label.name});
+						   label_uses.push_back({context, label.name, current_offset + 1, 0});
 					   },
 					   [&](tokens::Immediate immediate) { byte = immediate.value; }},
 			tokenizer.consume_token());
@@ -378,7 +397,8 @@ int main(int argc, char** argv)
 	};
 
 	// hax
-	bool done = false;
+	bool done  = false;
+	bool fatal = false;
 
 	while (!done)
 	{
@@ -388,40 +408,57 @@ int main(int argc, char** argv)
 					   handle_label_declaration,
 					   handle_select_offset,
 					   handle_binary_include,
-					   [](tokens::Newline) {},
+					   [&](tokens::Newline) { ++context.line; },
 					   [&](tokens::Eof) { done = true; }},
 			tokenizer.consume_token());
 	}
 
-	for (const auto& decl : label_declarations)
-	{
-		for (const auto& label : label_uses)
-		{
-			fmt::print(
-				stderr, "Patching label use '{}' @{} => {}\n", label.name, label.override_offset, decl.override_offset);
+	const auto error = [&](Context context, const auto&... params) {
+		fmt::print(stderr, "{}:{}: {}", args[0], context.line, fmt::format(std::forward<decltype(params)>(params)...));
+	};
 
+	for (auto& decl : label_definitions)
+	{
+		for (auto& label : label_uses)
+		{
 			if (label.name == decl.name)
 			{
-				output[label.override_offset] = decl.override_offset;
+				output[label.byte_to_override_offset] = decl.address >> label.bit_offset;
+				label.overriden                       = true;
+				decl.used                             = true;
 			}
 		}
 	}
 
-	/*if (!label_uses.empty())
+	for (const auto& decl : label_definitions)
 	{
-		// TODO: show which
-		fmt::print(stderr, "Missing labels\n");
-	}*/
+		if (!decl.used)
+		{
+			error(context, "Unused label '{}'\n", decl.name);
+		}
+	}
 
-	output.push_back(0xFF);
-	output.push_back(0xFF);
+	for (const auto& label : label_uses)
+	{
+		if (!label.overriden)
+		{
+			error(context, "Label usage '{}' has no matching definition\n", label.name);
+			fatal = true;
+		}
+	}
+
+	if (fatal)
+	{
+		fmt::print(stderr, "Quitting because of past errors\n");
+		return 1;
+	}
 
 	for (Byte b : output)
 	{
 		std::cout.put(b);
 	}
 
-	// TODO: allow to put raw bytes
+	// TODO: allow to put arbitrary bytes
 	// TODO: less shit syntax errors (use name_of at least or something, wrap std::visit and overloaded)
 	// TODO: split that crap up
 
