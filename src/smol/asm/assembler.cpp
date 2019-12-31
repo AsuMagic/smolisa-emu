@@ -1,6 +1,7 @@
 #include "assembler.hpp"
 
 #include <smol/common/ioutil.hpp>
+#include <smol/common/masks.hpp>
 
 Assembler::Assembler(std::string_view source) : tokenizer{source}
 {
@@ -24,6 +25,12 @@ Assembler::Assembler(std::string_view source) : tokenizer{source}
 	{
 		throw std::runtime_error{"Label linking failed"};
 	}
+}
+
+void Assembler::emit(Byte byte)
+{
+	program_output.push_back(byte);
+	++context.instruction_offset;
 }
 
 bool Assembler::link_labels()
@@ -118,10 +125,8 @@ void Assembler::handle_instruction(const tokens::Mnemonic& mnemonic)
 	}
 	}
 
-	// TODO: just an emit function
-	program_output.push_back(instruction);
-	program_output.push_back(instruction >> 8);
-	context.instruction_offset += 2;
+	emit(Byte(instruction));
+	emit(Byte(instruction >> 8));
 }
 
 void Assembler::handle_select_offset(const tokens::SelectOffset& select_offset)

@@ -48,6 +48,8 @@ class Assembler
 
 	Assembler(std::string_view source);
 
+	void emit(Byte byte);
+
 	private:
 	bool link_labels();
 
