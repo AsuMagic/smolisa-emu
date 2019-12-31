@@ -1,7 +1,6 @@
 #include "assembler.hpp"
 
 #include <smol/common/ioutil.hpp>
-#include <smol/common/util.hpp>
 
 Assembler::Assembler(std::string_view source) : tokenizer{source}
 {
@@ -11,15 +10,14 @@ Assembler::Assembler(std::string_view source) : tokenizer{source}
 
 	while (!done)
 	{
-		std::visit(
-			overloaded{unexpected_handler("mnemonic, label declaration or any assembler directive"),
-					   [this](const tokens::Mnemonic& m) { handle_instruction(m); },
-					   [this](const tokens::Label& m) { handle_label_declaration(m); },
-					   [this](const tokens::SelectOffset& m) { handle_select_offset(m); },
-					   [this](const tokens::IncludeBinaryFile& m) { handle_binary_include(m); },
-					   [&](tokens::Newline) { ++context.line; },
-					   [&](tokens::Eof) { done = true; }},
-			tokenizer.consume_token());
+		visit_next(
+			"mnemonic, label declaration or any assembler directive",
+			[this](const tokens::Mnemonic& m) { handle_instruction(m); },
+			[this](const tokens::Label& m) { handle_label_declaration(m); },
+			[this](const tokens::SelectOffset& m) { handle_select_offset(m); },
+			[this](const tokens::IncludeBinaryFile& m) { handle_binary_include(m); },
+			[&](tokens::Newline) { ++context.line; },
+			[&](tokens::Eof) { done = true; });
 	}
 
 	if (!link_labels())
@@ -70,12 +68,9 @@ bool Assembler::link_labels()
 
 void Assembler::handle_label_declaration(const tokens::Label& label)
 {
-	std::visit(
-		overloaded{unexpected_handler("colon after label declaration"),
-				   [&](tokens::Colon) {
-					   label_definitions.push_back({context, label.name});
-				   }},
-		tokenizer.consume_token());
+	visit_next("colon after label declaration", [&](tokens::Colon) {
+		label_definitions.push_back({context, label.name});
+	});
 }
 
 void Assembler::handle_instruction(const tokens::Mnemonic& mnemonic)
@@ -147,9 +142,7 @@ RegisterId Assembler::read_register_name()
 {
 	RegisterId id; // TODO: this is terrible
 
-	std::visit(
-		overloaded{unexpected_handler("register name"), [&](tokens::RegisterReference reg) { id = reg.id; }},
-		tokenizer.consume_token());
+	visit_next("register name", [&](tokens::RegisterReference reg) { id = reg.id; });
 
 	return id;
 }
@@ -158,13 +151,12 @@ Byte Assembler::read_immediate()
 {
 	Byte byte = 0xFF;
 
-	std::visit(
-		overloaded{unexpected_handler("immediate value or label"),
-				   [&](tokens::Label label) {
-					   label_uses.push_back({context, label.name, 0});
-				   },
-				   [&](tokens::Immediate immediate) { byte = immediate.value; }},
-		tokenizer.consume_token());
+	visit_next(
+		"immediate value or label",
+		[&](tokens::Label label) {
+			label_uses.push_back({context, label.name, 0});
+		},
+		[&](tokens::Immediate immediate) { byte = immediate.value; });
 
 	return byte;
 }

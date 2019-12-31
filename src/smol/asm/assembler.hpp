@@ -3,6 +3,7 @@
 #include <smol/asm/tokenizer.hpp>
 #include <smol/asm/tokens.hpp>
 #include <smol/common/types.hpp>
+#include <smol/common/util.hpp>
 
 #include <cstddef>
 #include <fmt/core.h>
@@ -59,16 +60,22 @@ class Assembler
 	Byte       read_immediate();
 
 	template<class... Ts>
+	void visit_next(std::string_view expected, Ts&&... handlers)
+	{
+		const auto token = tokenizer.consume_token();
+
+		std::visit(
+			overloaded{[&]([[maybe_unused]] const auto& token) {
+						   diagnostic(context, "Expected {}, got {}\n", expected, token_name(token));
+						   throw std::runtime_error{"Assembler error"};
+					   },
+					   std::forward<Ts>(handlers)...},
+			token);
+	}
+
+	template<class... Ts>
 	void diagnostic(const Context& context, Ts&&... params) const
 	{
 		fmt::print(stderr, "{}:{}: {}", context.source_path, context.line, fmt::format(std::forward<Ts>(params)...));
-	}
-
-	auto unexpected_handler(std::string_view expected) const
-	{
-		return [=]([[maybe_unused]] const auto& token) {
-			diagnostic(context, "Expected {}, got something else\n", expected);
-			throw std::runtime_error{"Assembler error"};
-		};
 	}
 };

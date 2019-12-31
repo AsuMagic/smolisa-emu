@@ -4,6 +4,7 @@
 #include <smol/common/registers.hpp>
 #include <smol/common/types.hpp>
 
+#include <array>
 #include <string_view>
 #include <variant>
 
@@ -60,3 +61,18 @@ using Token = std::variant<
 	tokens::Colon,
 	tokens::Newline,
 	tokens::Eof>;
+
+inline std::string_view token_name(const Token& token)
+{
+	return std::array{"unknown",
+					  "mnemonic",
+					  "register name",
+					  "label",
+					  "immediate",
+					  "offset selection",
+					  "include binary file",
+					  "colon",
+					  "newline",
+					  "eof"}
+		.at(token.index());
+}
