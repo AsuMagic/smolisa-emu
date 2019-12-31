@@ -12,7 +12,7 @@ Assembler::Assembler(std::string_view source) : tokenizer{source}
 	while (!done)
 	{
 		std::visit(
-			overloaded{get_default_handler(),
+			overloaded{unexpected_handler("mnemonic, label declaration or any assembler directive"),
 					   [this](const tokens::Mnemonic& m) { handle_instruction(m); },
 					   [this](const tokens::Label& m) { handle_label_declaration(m); },
 					   [this](const tokens::SelectOffset& m) { handle_select_offset(m); },
@@ -71,7 +71,7 @@ bool Assembler::link_labels()
 void Assembler::handle_label_declaration(const tokens::Label& label)
 {
 	std::visit(
-		overloaded{get_default_handler(),
+		overloaded{unexpected_handler("colon after label declaration"),
 				   [&](tokens::Colon) {
 					   label_definitions.push_back({context, label.name});
 				   }},
@@ -148,7 +148,7 @@ RegisterId Assembler::read_register_name()
 	RegisterId id; // TODO: this is terrible
 
 	std::visit(
-		overloaded{get_default_handler(), [&](tokens::RegisterReference reg) { id = reg.id; }},
+		overloaded{unexpected_handler("register name"), [&](tokens::RegisterReference reg) { id = reg.id; }},
 		tokenizer.consume_token());
 
 	return id;
@@ -159,7 +159,7 @@ Byte Assembler::read_immediate()
 	Byte byte = 0xFF;
 
 	std::visit(
-		overloaded{get_default_handler(),
+		overloaded{unexpected_handler("immediate value or label"),
 				   [&](tokens::Label label) {
 					   label_uses.push_back({context, label.name, 0});
 				   },

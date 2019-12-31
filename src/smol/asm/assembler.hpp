@@ -59,15 +59,16 @@ class Assembler
 	Byte       read_immediate();
 
 	template<class... Ts>
-	void diagnostic(Context& context, Ts&&... params)
+	void diagnostic(const Context& context, Ts&&... params) const
 	{
 		fmt::print(stderr, "{}:{}: {}", context.source_path, context.line, fmt::format(std::forward<Ts>(params)...));
 	}
 
-	auto get_default_handler() const
+	auto unexpected_handler(std::string_view expected) const
 	{
-		return [this]([[maybe_unused]] const auto& token) {
-			throw std::runtime_error{fmt::format("Unexpected token, current offset = {}", context.instruction_offset)};
+		return [=]([[maybe_unused]] const auto& token) {
+			diagnostic(context, "Expected {}, got something else\n", expected);
+			throw std::runtime_error{"Assembler error"};
 		};
 	}
 };
