@@ -44,7 +44,8 @@ class FrameBuffer
 		Byte r, g, b;
 	};
 
-	PaletteEntry get_palette_entry(std::size_t i) const;
+	void         set_palette_entry(std::size_t index, PaletteEntry entry);
+	PaletteEntry get_palette_entry(std::size_t index) const;
 
 	FrameBuffer(FrameBufferConfig config = {});
 

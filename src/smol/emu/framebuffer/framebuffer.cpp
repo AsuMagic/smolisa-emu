@@ -15,9 +15,18 @@ FrameBuffer::Char FrameBuffer::get_char(std::size_t x, std::size_t y) const
 	return c;
 }
 
-FrameBuffer::PaletteEntry FrameBuffer::get_palette_entry(std::size_t i) const
+void FrameBuffer::set_palette_entry(std::size_t index, FrameBuffer::PaletteEntry entry)
 {
-	const std::size_t base_address = i * sizeof_palette_entry;
+	const std::size_t base_address = index * sizeof_palette_entry;
+
+	m_palette_data[base_address]     = entry.r;
+	m_palette_data[base_address + 1] = entry.g;
+	m_palette_data[base_address + 2] = entry.b;
+}
+
+FrameBuffer::PaletteEntry FrameBuffer::get_palette_entry(std::size_t index) const
+{
+	const std::size_t base_address = index * sizeof_palette_entry;
 
 	PaletteEntry entry;
 	entry.r = m_palette_data[base_address];
@@ -49,9 +58,9 @@ FrameBuffer::FrameBuffer(FrameBufferConfig config) :
 
 void FrameBuffer::clear()
 {
-	std::fill(m_palette_data.begin(), m_palette_data.end(), 0);            // Default all palettes to black
-	m_palette_data[3] = m_palette_data[4] = m_palette_data[5] = char(255); // palette[1] = white
-	m_palette_data[6]                                         = char(127); // palette[2] = red
+	std::fill(m_palette_data.begin(), m_palette_data.end(), 0); // Default all palettes to black
+	set_palette_entry(1, {255, 255, 255});
+	set_palette_entry(2, {127, 0, 0});
 
 	for (std::size_t y = 0; y < height; ++y)
 	{
