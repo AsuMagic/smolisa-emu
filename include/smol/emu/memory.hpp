@@ -25,7 +25,7 @@ struct Mmu
 
 	std::vector<Byte> ram;
 
-	Bank current_bank;
+	Bank current_bank = Bank::Invalid;
 
 	std::function<Byte(Addr)>       mmio_read_callback;
 	std::function<void(Addr, Byte)> mmio_write_callback;
