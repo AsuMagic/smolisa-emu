@@ -200,9 +200,9 @@ bool FrameBuffer::set_byte(Addr addr, Byte byte)
 	{
 	case Region::FrameData:
 	{
-		m_character_data[addr - base_address] = byte;
+		m_character_data[addr - pixel_data_address] = byte;
 
-		const std::size_t pixel_index = (addr - base_address) / sizeof_fb_char;
+		const std::size_t pixel_index = (addr - pixel_data_address) / sizeof_fb_char;
 		const std::size_t x = pixel_index % width, y = pixel_index / width;
 		update_char(get_char(x, y), x, y);
 
@@ -231,7 +231,7 @@ std::optional<Byte> FrameBuffer::get_byte(Addr addr) const
 {
 	switch (byte_region(addr))
 	{
-	case Region::FrameData: return m_character_data[addr - base_address];
+	case Region::FrameData: return m_character_data[addr - pixel_data_address];
 	case Region::PaletteData: return m_palette_data[addr - palette_address];
 	case Region::VsyncWait:
 	case Region::Invalid: return std::nullopt;

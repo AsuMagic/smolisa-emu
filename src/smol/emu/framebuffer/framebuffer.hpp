@@ -23,8 +23,8 @@ class FrameBuffer
 		Invalid
 	};
 
-	static constexpr Addr base_address    = 0x0000;
-	static constexpr Addr palette_address = 0x0FA0;
+	static constexpr Addr pixel_data_address = 0x0000;
+	static constexpr Addr palette_address    = 0x0FA0;
 
 	static constexpr std::size_t width = 80, height = 25;
 
