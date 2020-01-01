@@ -117,10 +117,11 @@ void FrameBuffer::update_char(Char c, std::size_t x, std::size_t y)
 	{
 		for (std::size_t image_x = x * m_glyph_width; image_x < (x + 1) * m_glyph_width; ++image_x)
 		{
-			std::size_t glyph_base_x = (c.code % 128) * m_glyph_width, glyph_base_y = (c.code / 128) * m_glyph_height;
+			const std::size_t glyph_base_x = (c.code % 128) * m_glyph_width,
+							  glyph_base_y = (c.code / 128) * m_glyph_height;
 
-			std::size_t glyph_x = glyph_base_x + (image_x % m_glyph_width),
-						glyph_y = glyph_base_y + (image_y % m_glyph_height);
+			const std::size_t glyph_x = glyph_base_x + (image_x % m_glyph_width),
+							  glyph_y = glyph_base_y + (image_y % m_glyph_height);
 
 			const bool set = m_font.getPixel(glyph_x, glyph_y).r > 127;
 
