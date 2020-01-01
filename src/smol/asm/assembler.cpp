@@ -1,7 +1,7 @@
-#include "assembler.hpp"
+#include "smol/asm/assembler.hpp"
 
-#include <smol/common/ioutil.hpp>
-#include <smol/common/masks.hpp>
+#include "smol/common/ioutil.hpp"
+#include "smol/common/masks.hpp"
 
 Assembler::Assembler(std::string_view source) : tokenizer{source}
 {
@@ -13,12 +13,12 @@ Assembler::Assembler(std::string_view source) : tokenizer{source}
 	{
 		visit_next_token(
 			"mnemonic, label declaration or any assembler directive",
-			[this](const tokens::Mnemonic& m) { handle_instruction(m); },
-			[this](const tokens::Label& m) { handle_label_declaration(m); },
-			[this](const tokens::SelectOffset& m) { handle_select_offset(m); },
-			[this](const tokens::IncludeBinaryFile& m) { handle_binary_include(m); },
-			[&](tokens::Newline) { ++context.line; },
-			[&](tokens::Eof) { done = true; });
+			[this](tokens::Mnemonic m) { handle_instruction(m); },
+			[this](tokens::Label m) { handle_label_declaration(m); },
+			[this](tokens::SelectOffset m) { handle_select_offset(m); },
+			[this](tokens::IncludeBinaryFile m) { handle_binary_include(m); },
+			[&](tokens::Newline /*unused*/) { ++context.line; },
+			[&](tokens::Eof /*unused*/) { done = true; });
 	}
 
 	if (!link_labels())
@@ -33,7 +33,7 @@ void Assembler::emit(Byte byte)
 	++context.instruction_offset;
 }
 
-bool Assembler::link_labels()
+auto Assembler::link_labels() -> bool
 {
 	bool fatal = false;
 
@@ -73,14 +73,14 @@ bool Assembler::link_labels()
 	return !fatal;
 }
 
-void Assembler::handle_label_declaration(const tokens::Label& label)
+void Assembler::handle_label_declaration(tokens::Label label)
 {
-	visit_next_token("colon after label declaration", [&](tokens::Colon) {
+	visit_next_token("colon after label declaration", [&](tokens::Colon /*unused*/) {
 		label_definitions.push_back({context, label.name});
 	});
 }
 
-void Assembler::handle_instruction(const tokens::Mnemonic& mnemonic)
+void Assembler::handle_instruction(tokens::Mnemonic mnemonic)
 {
 	const auto& info = instruction_infos[Byte(mnemonic.opcode)];
 
@@ -129,26 +129,26 @@ void Assembler::handle_instruction(const tokens::Mnemonic& mnemonic)
 	emit(Byte(instruction >> 8));
 }
 
-void Assembler::handle_select_offset(const tokens::SelectOffset& select_offset)
+void Assembler::handle_select_offset(tokens::SelectOffset select_offset)
 {
 	// TODO: allow setting the offset in the past
 	context.instruction_offset = select_offset.address;
 	program_output.resize(select_offset.address);
 }
 
-void Assembler::handle_binary_include(const tokens::IncludeBinaryFile& include)
+void Assembler::handle_binary_include(tokens::IncludeBinaryFile include)
 {
 	const auto content = load_file_raw(include.path);
 	program_output.insert(program_output.end(), content.begin(), content.end());
 	context.instruction_offset += content.size();
 }
 
-RegisterId Assembler::read_register_name()
+auto Assembler::read_register_name() -> RegisterId
 {
 	return visit_next_token<RegisterId>("register name", [&](tokens::RegisterReference reg) { return reg.id; });
 }
 
-Byte Assembler::read_immediate()
+auto Assembler::read_immediate() -> Byte
 {
 	Byte byte = 0xFF;
 

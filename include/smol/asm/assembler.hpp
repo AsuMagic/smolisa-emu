@@ -1,9 +1,9 @@
 #pragma once
 
-#include <smol/asm/tokenizer.hpp>
-#include <smol/asm/tokens.hpp>
-#include <smol/common/types.hpp>
-#include <smol/common/util.hpp>
+#include "smol/asm/tokenizer.hpp"
+#include "smol/asm/tokens.hpp"
+#include "smol/common/types.hpp"
+#include "smol/common/util.hpp"
 
 #include <cstddef>
 #include <fmt/core.h>
@@ -31,7 +31,7 @@ struct LabelDefinition
 {
 	Context          context;
 	std::string_view name;
-	std::size_t      used = false;
+	bool             used = false;
 };
 
 class Assembler
@@ -46,23 +46,23 @@ class Assembler
 
 	Tokenizer tokenizer;
 
-	Assembler(std::string_view source);
+	explicit Assembler(std::string_view source);
 
 	void emit(Byte byte);
 
 	private:
-	bool link_labels();
+	auto link_labels() -> bool;
 
-	void handle_label_declaration(const tokens::Label&);
-	void handle_instruction(const tokens::Mnemonic&);
-	void handle_select_offset(const tokens::SelectOffset&);
-	void handle_binary_include(const tokens::IncludeBinaryFile&);
+	void handle_label_declaration(tokens::Label label);
+	void handle_instruction(tokens::Mnemonic mnemonic);
+	void handle_select_offset(tokens::SelectOffset select_offset);
+	void handle_binary_include(tokens::IncludeBinaryFile include);
 
-	RegisterId read_register_name();
-	Byte       read_immediate();
+	auto read_register_name() -> RegisterId;
+	auto read_immediate() -> Byte;
 
 	template<class R = void, class... Ts>
-	R visit_next_token(std::string_view expected, Ts&&... handlers)
+	auto visit_next_token(std::string_view expected, Ts&&... handlers) -> R
 	{
 		const auto token = tokenizer.consume_token();
 

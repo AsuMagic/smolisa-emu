@@ -1,7 +1,7 @@
 #pragma once
 
-#include <smol/common/registers.hpp>
-#include <smol/emu/memory.hpp>
+#include "smol/common/registers.hpp"
+#include "smol/emu/memory.hpp"
 
 #include <array>
 #include <optional>
@@ -12,8 +12,8 @@ struct RegisterFile
 
 	std::array<Word, register_count> data = {};
 
-	Word&       operator[](RegisterId id) { return data[std::size_t(id)]; }
-	const Word& operator[](RegisterId id) const { return data[std::size_t(id)]; }
+	auto operator[](RegisterId id) -> Word& { return data[std::size_t(id)]; }
+	auto operator[](RegisterId id) const -> const Word& { return data[std::size_t(id)]; }
 };
 
 struct Core
@@ -28,5 +28,5 @@ struct Core
 	void dispatch();
 	void boot();
 
-	std::string debug_state() const;
+	[[nodiscard]] auto debug_state() const -> std::string;
 };

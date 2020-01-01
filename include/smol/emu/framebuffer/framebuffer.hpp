@@ -1,6 +1,6 @@
 #pragma once
 
-#include <smol/common/types.hpp>
+#include "smol/common/types.hpp"
 
 #include <SFML/Graphics.hpp>
 #include <cstddef>
@@ -42,25 +42,25 @@ class FrameBuffer
 	static constexpr std::size_t sizeof_fb_char       = 2;
 	static constexpr std::size_t sizeof_palette_entry = 3;
 
-	Char get_char(std::size_t x, std::size_t y) const;
+	auto get_char(std::size_t x, std::size_t y) const -> Char;
 
-	void         set_palette_entry(std::size_t index, PaletteEntry entry);
-	PaletteEntry get_palette_entry(std::size_t index) const;
+	void set_palette_entry(std::size_t index, PaletteEntry entry);
+	auto get_palette_entry(std::size_t index) const -> PaletteEntry;
 
-	FrameBuffer(FrameBufferConfig config = {});
+	explicit FrameBuffer(FrameBufferConfig config = {});
 
 	void clear();
 	void rebuild();
-	bool display();
+	auto display() -> bool;
 
 	void update_char(Char c, std::size_t x, std::size_t y);
 
 	void display_simple_string(std::string_view s, std::size_t origin_x, std::size_t origin_y);
 
-	Region byte_region(Addr a) const;
+	static auto byte_region(Addr a) -> Region;
 
-	bool                set_byte(Addr a, Byte b);
-	std::optional<Byte> get_byte(Addr a) const;
+	auto set_byte(Addr a, Byte b) -> bool;
+	auto get_byte(Addr a) const -> std::optional<Byte>;
 
 	private:
 	std::vector<char> m_character_data;

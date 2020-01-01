@@ -1,0 +1,2 @@
+Checks: '-*,bugprone-*,cert-*,cppcoreguidelines-*,clang-analyzer-*,hicpp-*,modernize-*,performance-*,portability-*,readability-*'
+HeaderFilterRegex: 'include/*'

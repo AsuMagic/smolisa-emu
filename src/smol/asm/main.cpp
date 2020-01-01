@@ -1,5 +1,5 @@
-#include <smol/asm/assembler.hpp>
-#include <smol/common/ioutil.hpp>
+#include "smol/asm/assembler.hpp"
+#include "smol/common/ioutil.hpp"
 
 #include <fmt/core.h>
 #include <iostream>
@@ -8,7 +8,7 @@
 #include <string_view>
 #include <vector>
 
-int main(int argc, char** argv)
+auto main(int argc, char** argv) -> int
 {
 	const std::vector<std::string_view> args(argv + 1, argv + argc);
 

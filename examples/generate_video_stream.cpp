@@ -2,14 +2,15 @@
 #include <iostream>
 #include <stdexcept>
 
-int main()
+auto main() -> int
 {
 	std::cerr << "Reading file from stdin\n";
 
-	std::istream& in = std::cin;
+	std::istream& in  = std::cin;
 	std::ostream& out = std::cout;
 
-	std::size_t width = 0, height = 0;
+	std::size_t width  = 0;
+	std::size_t height = 0;
 	std::cin >> width >> height;
 
 	if (width != 80 || height < 25)
@@ -25,7 +26,8 @@ int main()
 
 	while (in)
 	{
-		std::string frame, line;
+		std::string frame;
+		std::string line;
 
 		for (std::size_t y = 0; y < height; ++y)
 		{

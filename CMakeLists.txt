@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.9)
 
 set(SOURCES_COMMON
     "src/smol/common/ioutil.cpp"
@@ -17,28 +17,33 @@ set(SOURCES_ASSEMBLER
     "src/smol/asm/tokenizer.cpp"
 )
 
+function(component target)
+    target_compile_features(${target} PRIVATE cxx_std_20)
+    target_include_directories(${target} PRIVATE "include/")
+endfunction()
+
 project(smolisa-tools)
 
-# Emulator
-add_executable(smolisa-emu ${SOURCES_COMMON} ${SOURCES_EMULATOR})
+# Common
+add_library(smolisa-common STATIC ${SOURCES_COMMON})
+component(smolisa-common)
 
-target_compile_features(smolisa-emu PRIVATE cxx_std_20)
-target_include_directories(smolisa-emu PRIVATE "src/")
+# Emulator
+add_executable(smolisa-emu ${SOURCES_EMULATOR})
+component(smolisa-emu)
 
 target_link_libraries(smolisa-emu PRIVATE
+    smolisa-common
     fmt
     sfml-window sfml-graphics sfml-system # TODO: make SFML optional
 )
 
 # Assembler
-add_executable(smolisa-as ${SOURCES_COMMON} ${SOURCES_ASSEMBLER})
+add_executable(smolisa-as ${SOURCES_ASSEMBLER})
+component(smolisa-as)
 
-target_compile_features(smolisa-as PRIVATE cxx_std_20)
-target_include_directories(smolisa-as PRIVATE "src/")
-
-target_link_libraries(smolisa-as PRIVATE fmt)
+target_link_libraries(smolisa-as PRIVATE smolisa-common fmt)
 
 # Video stream generator
 add_executable(example-generate-video-stream "examples/generate_video_stream.cpp")
-
-target_compile_features(smolisa-as PRIVATE cxx_std_17)
+component(example-generate-video-stream)

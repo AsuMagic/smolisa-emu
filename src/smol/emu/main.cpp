@@ -1,6 +1,6 @@
-#include <smol/common/ioutil.hpp>
-#include <smol/emu/core.hpp>
-#include <smol/emu/framebuffer/framebuffer.hpp>
+#include "smol/common/ioutil.hpp"
+#include "smol/emu/core.hpp"
+#include "smol/emu/framebuffer/framebuffer.hpp"
 
 #include <algorithm>
 #include <fmt/core.h>
@@ -9,7 +9,7 @@
 #include <string_view>
 #include <vector>
 
-int main(int argc, char** argv)
+auto main(int argc, char** argv) -> int
 {
 	const std::vector<std::string_view> args(argv + 1, argv + argc);
 
@@ -94,5 +94,7 @@ int main(int argc, char** argv)
 	}
 
 	while (fb.display())
+	{
 		;
+	}
 }

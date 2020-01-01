@@ -1,4 +1,4 @@
-#include "memory.hpp"
+#include "smol/emu/memory.hpp"
 
 #include <cstddef>
 #include <fmt/core.h>
@@ -6,7 +6,7 @@
 
 Mmu::Mmu(std::size_t bank_count) : ram(system_memory_size + bank_memory_size * bank_count) {}
 
-Bank Mmu::set_current_bank(Bank new_bank)
+auto Mmu::set_current_bank(Bank new_bank) -> Bank
 {
 	if (new_bank == Bank::Invalid || new_bank == Bank::Mmio || Byte(new_bank) < bank_count() + 1)
 	{
@@ -21,9 +21,9 @@ Bank Mmu::set_current_bank(Bank new_bank)
 	return current_bank;
 }
 
-std::size_t Mmu::bank_count() const { return (ram.size() - system_memory_size) / bank_memory_size; }
+auto Mmu::bank_count() const -> std::size_t { return (ram.size() - system_memory_size) / bank_memory_size; }
 
-std::size_t Mmu::ram_offset(Addr addr) const
+auto Mmu::ram_offset(Addr addr) const -> std::size_t
 {
 	if (is_address_banked(addr))
 	{
@@ -54,9 +54,9 @@ std::size_t Mmu::ram_offset(Addr addr) const
 	return addr;
 }
 
-bool Mmu::is_mmio(Addr addr) const { return is_address_banked(addr) && current_bank == Bank::Mmio; }
+auto Mmu::is_mmio(Addr addr) const -> bool { return is_address_banked(addr) && current_bank == Bank::Mmio; }
 
-Byte Mmu::get_byte(Addr addr) const
+auto Mmu::get_byte(Addr addr) const -> Byte
 {
 	if (is_mmio(addr))
 	{
@@ -79,4 +79,4 @@ void Mmu::set_byte(Addr addr, Byte data)
 	ram[ram_offset(addr)] = data;
 }
 
-Word Mmu::get_word(Addr addr) const { return (get_byte(addr + 0) << 0) | (get_byte(addr + 1) << 8); }
+auto Mmu::get_word(Addr addr) const -> Word { return (get_byte(addr + 0) << 0) | (get_byte(addr + 1) << 8); }

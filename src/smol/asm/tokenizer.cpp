@@ -1,22 +1,24 @@
-#include "tokenizer.hpp"
+#include "smol/asm/tokenizer.hpp"
 
 Tokenizer::Tokenizer(std::string_view source) : m_source{source}, m_it{m_source.begin()} {}
 
-Token Tokenizer::consume_token()
+auto Tokenizer::consume_token() -> Token
 {
-	if (!read())
+	if (read() == 0)
 	{
 		return tokens::Eof{};
 	}
 
 	// Strip whitespace
-	while (is_space(m_last) && read())
-		;
+	while (is_space(m_last) && (read() != 0))
+	{
+	}
 
 	if (m_last == ';')
 	{
-		while (m_last != '\n' && read())
-			;
+		while (m_last != '\n' && (read() != 0))
+		{
+		}
 	}
 
 	if (is_newline(m_last))
@@ -38,7 +40,8 @@ Token Tokenizer::consume_token()
 	if (m_last == '@')
 	{
 		while (is_num(read()))
-			;
+		{
+		}
 
 		auto offset_string = token_string();
 		offset_string.remove_prefix(1);
@@ -50,7 +53,8 @@ Token Tokenizer::consume_token()
 	if (m_last == '#')
 	{
 		while (!is_newline(read()) && m_it != m_source.end())
-			;
+		{
+		}
 
 		auto offset_string = token_string();
 		offset_string.remove_prefix(1);
@@ -73,7 +77,8 @@ Token Tokenizer::consume_token()
 	if (is_identifier_begin(m_last) || m_last == '$')
 	{
 		while (is_identifier(read()))
-			;
+		{
+		}
 
 		if (m_it != m_source.end())
 		{
@@ -103,7 +108,8 @@ Token Tokenizer::consume_token()
 	if (is_num(m_last))
 	{
 		while (is_num(read()))
-			;
+		{
+		}
 
 		// TODO: handle binary and hex
 
@@ -119,7 +125,7 @@ Token Tokenizer::consume_token()
 	return std::monostate{};
 }
 
-char Tokenizer::read()
+auto Tokenizer::read() -> char
 {
 	if (m_it != m_source.end())
 	{

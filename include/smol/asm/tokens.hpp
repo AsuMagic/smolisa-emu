@@ -1,8 +1,8 @@
 #pragma once
 
-#include <smol/common/opcodes.hpp>
-#include <smol/common/registers.hpp>
-#include <smol/common/types.hpp>
+#include "smol/common/opcodes.hpp"
+#include "smol/common/registers.hpp"
+#include "smol/common/types.hpp"
 
 #include <array>
 #include <string_view>
@@ -62,7 +62,7 @@ using Token = std::variant<
 	tokens::Newline,
 	tokens::Eof>;
 
-inline std::string_view token_name(const Token& token)
+inline auto token_name(const Token& token) -> std::string_view
 {
 	return std::array{"unknown",
 					  "mnemonic",

@@ -1,7 +1,7 @@
-#include "core.hpp"
+#include "smol/emu/core.hpp"
 
-#include <smol/common/instruction.hpp>
-#include <smol/common/opcodes.hpp>
+#include "smol/common/instruction.hpp"
+#include "smol/common/opcodes.hpp"
 
 #include <fmt/core.h>
 #include <iostream>
@@ -164,14 +164,10 @@ void Core::boot()
 	{
 		current_instruction.reset();
 		dispatch();
-
-		/*fmt::print(stderr, "\n{}\n", debug_state());
-		char c;
-		std::cin >> c;*/
 	}
 }
 
-std::string Core::debug_state() const
+auto Core::debug_state() const -> std::string
 {
 	std::string ret;
 

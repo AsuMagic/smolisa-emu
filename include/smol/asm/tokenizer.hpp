@@ -1,9 +1,9 @@
 #pragma once
 
-#include <smol/asm/charutil.hpp>
-#include <smol/asm/instructioninfo.hpp>
-#include <smol/asm/registerinfo.hpp>
-#include <smol/asm/tokens.hpp>
+#include "smol/asm/charutil.hpp"
+#include "smol/asm/instructioninfo.hpp"
+#include "smol/asm/registerinfo.hpp"
+#include "smol/asm/tokens.hpp"
 
 #include <algorithm>
 #include <cstddef>
@@ -13,12 +13,12 @@
 class Tokenizer
 {
 	public:
-	Tokenizer(std::string_view source);
+	explicit Tokenizer(std::string_view source);
 
-	Token consume_token();
+	auto consume_token() -> Token;
 
 	private:
-	char read();
+	auto read() -> char;
 
 	std::string_view                 m_source;
 	std::string_view::const_iterator m_it;

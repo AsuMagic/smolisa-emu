@@ -1,14 +1,14 @@
-#include "framebuffer.hpp"
+#include "smol/emu/framebuffer/framebuffer.hpp"
 
-#include <smol/common/masks.hpp>
+#include "smol/common/masks.hpp"
 
 #include <fmt/core.h>
 
-FrameBuffer::Char FrameBuffer::get_char(std::size_t x, std::size_t y) const
+auto FrameBuffer::get_char(std::size_t x, std::size_t y) const -> FrameBuffer::Char
 {
 	const std::size_t base_address = (x + y * width) * sizeof_fb_char;
 
-	Char c;
+	Char c{};
 	c.code                = m_character_data.at(base_address);
 	c.palette_front_entry = (m_character_data.at(base_address + 1) & masks::lower_nibble) >> 0;
 	c.palette_back_entry  = (m_character_data.at(base_address + 1) & masks::upper_nibble) >> 4;
@@ -24,11 +24,11 @@ void FrameBuffer::set_palette_entry(std::size_t index, FrameBuffer::PaletteEntry
 	m_palette_data[base_address + 2] = entry.b;
 }
 
-FrameBuffer::PaletteEntry FrameBuffer::get_palette_entry(std::size_t index) const
+auto FrameBuffer::get_palette_entry(std::size_t index) const -> FrameBuffer::PaletteEntry
 {
 	const std::size_t base_address = index * sizeof_palette_entry;
 
-	PaletteEntry entry;
+	PaletteEntry entry{};
 	entry.r = m_palette_data[base_address];
 	entry.g = m_palette_data[base_address + 1];
 	entry.b = m_palette_data[base_address + 2];
@@ -84,9 +84,9 @@ void FrameBuffer::rebuild()
 	}
 }
 
-bool FrameBuffer::display()
+auto FrameBuffer::display() -> bool
 {
-	for (sf::Event ev; m_window.pollEvent(ev);)
+	for (sf::Event ev{}; m_window.pollEvent(ev);)
 	{
 		switch (ev.type)
 		{
@@ -126,11 +126,11 @@ void FrameBuffer::update_char(Char c, std::size_t x, std::size_t y)
 	{
 		for (std::size_t image_x = x * m_glyph_width; image_x < (x + 1) * m_glyph_width; ++image_x)
 		{
-			const std::size_t glyph_base_x = (c.code % 128) * m_glyph_width,
-							  glyph_base_y = (c.code / 128) * m_glyph_height;
+			const std::size_t glyph_base_x = (c.code % 128) * m_glyph_width;
+			const std::size_t glyph_base_y = (c.code / 128) * m_glyph_height;
 
-			const std::size_t glyph_x = glyph_base_x + (image_x % m_glyph_width),
-							  glyph_y = glyph_base_y + (image_y % m_glyph_height);
+			const std::size_t glyph_x = glyph_base_x + (image_x % m_glyph_width);
+			const std::size_t glyph_y = glyph_base_y + (image_y % m_glyph_height);
 
 			const bool set = m_font.getPixel(glyph_x, glyph_y).r > 127;
 
@@ -141,12 +141,13 @@ void FrameBuffer::update_char(Char c, std::size_t x, std::size_t y)
 
 void FrameBuffer::display_simple_string(std::string_view s, std::size_t origin_x, std::size_t origin_y)
 {
-	std::size_t x = origin_x, y = origin_y;
+	std::size_t x = origin_x;
+	std::size_t y = origin_y;
 
-	for (std::size_t i = 0; i < s.size(); ++i)
+	for (char i : s)
 	{
 		// Jump on newlines
-		if (s[i] == '\n')
+		if (i == '\n')
 		{
 			++y;
 			x = origin_x;
@@ -167,14 +168,14 @@ void FrameBuffer::display_simple_string(std::string_view s, std::size_t origin_x
 		}
 
 		const Addr addr = (x + y * width) * sizeof_fb_char;
-		set_byte(addr, s[i]);
+		set_byte(addr, i);
 		set_byte(addr + 1, 0b0010'0001); // Alert color
 
 		++x;
 	}
 }
 
-FrameBuffer::Region FrameBuffer::byte_region(Addr addr) const
+auto FrameBuffer::byte_region(Addr addr) -> FrameBuffer::Region
 {
 	if (addr >= 0x0000 && addr <= 0x0F9F)
 	{
@@ -194,7 +195,7 @@ FrameBuffer::Region FrameBuffer::byte_region(Addr addr) const
 	return Region::Invalid;
 }
 
-bool FrameBuffer::set_byte(Addr addr, Byte byte)
+auto FrameBuffer::set_byte(Addr addr, Byte byte) -> bool
 {
 	switch (byte_region(addr))
 	{
@@ -203,7 +204,8 @@ bool FrameBuffer::set_byte(Addr addr, Byte byte)
 		m_character_data[addr - pixel_data_address] = byte;
 
 		const std::size_t pixel_index = (addr - pixel_data_address) / sizeof_fb_char;
-		const std::size_t x = pixel_index % width, y = pixel_index / width;
+		const std::size_t x           = pixel_index % width;
+		const std::size_t y           = pixel_index / width;
 		update_char(get_char(x, y), x, y);
 
 		return true;
@@ -227,7 +229,7 @@ bool FrameBuffer::set_byte(Addr addr, Byte byte)
 	}
 }
 
-std::optional<Byte> FrameBuffer::get_byte(Addr addr) const
+auto FrameBuffer::get_byte(Addr addr) const -> std::optional<Byte>
 {
 	switch (byte_region(addr))
 	{

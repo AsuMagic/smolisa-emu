@@ -1,8 +1,8 @@
-#include "ioutil.hpp"
+#include "smol/common/ioutil.hpp"
 
 #include <fstream>
 
-std::vector<char> load_file_raw(std::string_view path)
+auto load_file_raw(std::string_view path) -> std::vector<char>
 {
 	std::ifstream file{std::string{path}, std::ios::binary | std::ios::ate};
 
