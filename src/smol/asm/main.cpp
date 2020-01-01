@@ -28,6 +28,5 @@ int main(int argc, char** argv)
 	}
 
 	// TODO: allow to put arbitrary bytes
-	// TODO: less shit syntax errors (use name_of at least or something, wrap std::visit and overloaded)
 	// TODO: allowing to load low and high bits of address!!
 }
