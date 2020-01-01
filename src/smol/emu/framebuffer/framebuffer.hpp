@@ -23,6 +23,17 @@ class FrameBuffer
 		Invalid
 	};
 
+	struct Char
+	{
+		char code;
+		char palette_front_entry : 4, palette_back_entry : 4;
+	};
+
+	struct PaletteEntry
+	{
+		Byte r, g, b;
+	};
+
 	static constexpr Addr pixel_data_address = 0x0000;
 	static constexpr Addr palette_address    = 0x0FA0;
 
@@ -31,18 +42,7 @@ class FrameBuffer
 	static constexpr std::size_t sizeof_fb_char       = 2;
 	static constexpr std::size_t sizeof_palette_entry = 3;
 
-	struct Char
-	{
-		char code;
-		char palette_front_entry : 4, palette_back_entry : 4;
-	};
-
 	Char get_char(std::size_t x, std::size_t y) const;
-
-	struct PaletteEntry
-	{
-		Byte r, g, b;
-	};
 
 	void         set_palette_entry(std::size_t index, PaletteEntry entry);
 	PaletteEntry get_palette_entry(std::size_t index) const;
