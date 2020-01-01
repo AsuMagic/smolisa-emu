@@ -11,7 +11,7 @@ Assembler::Assembler(std::string_view source) : tokenizer{source}
 
 	while (!done)
 	{
-		visit_next(
+		visit_next_token(
 			"mnemonic, label declaration or any assembler directive",
 			[this](const tokens::Mnemonic& m) { handle_instruction(m); },
 			[this](const tokens::Label& m) { handle_label_declaration(m); },
@@ -75,7 +75,7 @@ bool Assembler::link_labels()
 
 void Assembler::handle_label_declaration(const tokens::Label& label)
 {
-	visit_next("colon after label declaration", [&](tokens::Colon) {
+	visit_next_token("colon after label declaration", [&](tokens::Colon) {
 		label_definitions.push_back({context, label.name});
 	});
 }
@@ -145,18 +145,14 @@ void Assembler::handle_binary_include(const tokens::IncludeBinaryFile& include)
 
 RegisterId Assembler::read_register_name()
 {
-	RegisterId id; // TODO: this is terrible
-
-	visit_next("register name", [&](tokens::RegisterReference reg) { id = reg.id; });
-
-	return id;
+	return visit_next_token<RegisterId>("register name", [&](tokens::RegisterReference reg) { return reg.id; });
 }
 
 Byte Assembler::read_immediate()
 {
 	Byte byte = 0xFF;
 
-	visit_next(
+	visit_next_token(
 		"immediate value or label",
 		[&](tokens::Label label) {
 			label_uses.push_back({context, label.name, 0});

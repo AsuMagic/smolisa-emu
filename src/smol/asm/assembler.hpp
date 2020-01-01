@@ -61,18 +61,17 @@ class Assembler
 	RegisterId read_register_name();
 	Byte       read_immediate();
 
-	template<class... Ts>
-	void visit_next(std::string_view expected, Ts&&... handlers)
+	template<class R = void, class... Ts>
+	R visit_next_token(std::string_view expected, Ts&&... handlers)
 	{
 		const auto token = tokenizer.consume_token();
 
-		std::visit(
-			overloaded{[&]([[maybe_unused]] const auto& token) {
-						   diagnostic(context, "Expected {}, got {}\n", expected, token_name(token));
-						   throw std::runtime_error{"Assembler error"};
-					   },
-					   std::forward<Ts>(handlers)...},
-			token);
+		const auto unexpected_handler = [&]([[maybe_unused]] const auto& token) -> R {
+			diagnostic(context, "Expected {}, got {}\n", expected, token_name(token));
+			throw std::runtime_error{"Assembler error"};
+		};
+
+		return std::visit<R>(overloaded{unexpected_handler, std::forward<Ts>(handlers)...}, token);
 	}
 
 	template<class... Ts>
