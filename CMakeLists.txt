@@ -37,3 +37,8 @@ target_compile_features(smolisa-as PRIVATE cxx_std_17)
 target_include_directories(smolisa-as PRIVATE "src/")
 
 target_link_libraries(smolisa-as PRIVATE fmt)
+
+# Video stream generator
+add_executable(example-generate-video-stream "examples/generate_video_stream.cpp")
+
+target_compile_features(smolisa-as PRIVATE cxx_std_17)
