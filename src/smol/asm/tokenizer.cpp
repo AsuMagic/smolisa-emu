@@ -37,17 +37,42 @@ auto Tokenizer::consume_token() -> Token
 		return {&*token_begin_it, std::size_t(std::distance(token_begin_it, m_it))};
 	};
 
-	if (m_last == '@')
-	{
-		while (is_num(read()))
+	const auto parse_integral = [&] {
+		while (!is_space(m_last) && !is_newline(m_last) && (read() != 0))
 		{
 		}
 
-		auto offset_string = token_string();
-		offset_string.remove_prefix(1);
+		if (m_it != m_source.end())
+		{
+			// Backtrack just once
+			--m_it;
+		}
 
-		// TODO: handle binary and hex
-		return tokens::SelectOffset{std::stoull(std::string{offset_string})};
+		auto integral_string = token_string();
+
+		int base = 10;
+
+		if (integral_string.starts_with("0x"))
+		{
+			integral_string.remove_prefix(2);
+			base = 16;
+		}
+
+		try
+		{
+			return std::stoul(std::string{integral_string}, nullptr, base);
+		}
+		catch (const std::exception& e)
+		{
+			// TODO: diagnostic here
+			throw;
+		}
+	};
+
+	if (m_last == '@')
+	{
+		token_begin_it = m_it;
+		return tokens::SelectOffset{parse_integral()};
 	}
 
 	if (m_last == '#')
@@ -105,15 +130,9 @@ auto Tokenizer::consume_token() -> Token
 		return tokens::Label{str};
 	}
 
-	if (is_num(m_last))
+	if (is_digit(m_last))
 	{
-		while (is_num(read()))
-		{
-		}
-
-		// TODO: handle binary and hex
-
-		return tokens::Immediate{Byte(std::stoi(std::string{token_string()}))};
+		return tokens::Immediate{Byte(parse_integral())};
 	}
 
 	// Check one last time whether we got EOF

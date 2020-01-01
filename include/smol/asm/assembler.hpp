@@ -53,6 +53,8 @@ class Assembler
 	private:
 	auto link_labels() -> bool;
 
+	void expect_newline();
+
 	void handle_label_declaration(tokens::Label label);
 	void handle_instruction(tokens::Mnemonic mnemonic);
 	void handle_select_offset(tokens::SelectOffset select_offset);

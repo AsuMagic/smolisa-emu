@@ -79,25 +79,25 @@
 ; }
 
 ; char* rom_ptr = (char*)VIDEO_ROM_START_ADDRESS;
-li $g0 32 ; 0x20
+li $g0 0x20
 swb $g0 $g0
-li $g0 0 ; 0x00
+li $g0 0x00
 
 ; short rom_bank = VIDEO_ROM_START_BANK;
 xor $g1 $g1 $g1
-li $g1 1 ; 0x01
+li $g1 0x01
 
 ; const char* framebuffer_stop_address = 0x2FA1;
-li $g2 47
+li $g2 0x2F
 swb $g2 $g2
-li $g2 161
+li $g2 0xA1
 
 ; while(true)
 prepareframe:
 	; char* framebuffer_address = FRAMEBUFFER_START_ADDRESS;
-	li $g3 32 ; 0x20
+	li $g3 0x20
 	swb $g3 $g3
-	li $g3 1 ; 0x01
+	li $g3 0x01
 
 	; while (framebuffer_address != framebuffer_stop_address)
 	drawframe:
@@ -207,9 +207,9 @@ prepareframe:
 		; fallthrough
 
 	; wait_vsync();
-	li $g14 47 ; 0x2F
+	li $g14 0x2F
 	swb $g14 $g14
-	li $g14 208 ; 0xD0
+	li $g14 0xD0
 	sm $g14 $g14 ; the byte we write has no importance
 
 	; (handle looping)
@@ -220,5 +220,5 @@ prepareframe:
 	; $g14 freed
 
 ; Include the binary video file
-@8192
+@0x2000
 #./assets/badapple.bin

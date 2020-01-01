@@ -73,11 +73,19 @@ auto Assembler::link_labels() -> bool
 	return !fatal;
 }
 
+void Assembler::expect_newline()
+{
+	visit_next_token(
+		"newline", [&]([[maybe_unused]] tokens::Newline) {}, [&]([[maybe_unused]] tokens::Eof) {});
+}
+
 void Assembler::handle_label_declaration(tokens::Label label)
 {
 	visit_next_token("colon after label declaration", [&](tokens::Colon /*unused*/) {
 		label_definitions.push_back({context, label.name});
 	});
+
+	expect_newline();
 }
 
 void Assembler::handle_instruction(tokens::Mnemonic mnemonic)
@@ -127,6 +135,8 @@ void Assembler::handle_instruction(tokens::Mnemonic mnemonic)
 
 	emit(Byte(instruction));
 	emit(Byte(instruction >> 8));
+
+	expect_newline();
 }
 
 void Assembler::handle_select_offset(tokens::SelectOffset select_offset)
@@ -134,6 +144,8 @@ void Assembler::handle_select_offset(tokens::SelectOffset select_offset)
 	// TODO: allow setting the offset in the past
 	context.instruction_offset = select_offset.address;
 	program_output.resize(select_offset.address);
+
+	expect_newline();
 }
 
 void Assembler::handle_binary_include(tokens::IncludeBinaryFile include)
@@ -141,6 +153,8 @@ void Assembler::handle_binary_include(tokens::IncludeBinaryFile include)
 	const auto content = load_file_raw(include.path);
 	program_output.insert(program_output.end(), content.begin(), content.end());
 	context.instruction_offset += content.size();
+
+	expect_newline();
 }
 
 auto Assembler::read_register_name() -> RegisterId
