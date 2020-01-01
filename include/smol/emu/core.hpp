@@ -12,8 +12,8 @@ struct RegisterFile
 
 	std::array<Word, register_count> data = {};
 
-	auto operator[](RegisterId id) -> Word& { return data[std::size_t(id)]; }
-	auto operator[](RegisterId id) const -> const Word& { return data[std::size_t(id)]; }
+	auto operator[](RegisterId id) -> Word& { return data.at(std::size_t(id)); }
+	auto operator[](RegisterId id) const -> const Word& { return data.at(std::size_t(id)); }
 };
 
 struct Core
