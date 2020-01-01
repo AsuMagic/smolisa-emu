@@ -1,5 +1,7 @@
 #include "framebuffer.hpp"
 
+#include <smol/common/masks.hpp>
+
 #include <fmt/core.h>
 
 FrameBuffer::Char FrameBuffer::get_char(std::size_t x, std::size_t y) const
@@ -8,8 +10,8 @@ FrameBuffer::Char FrameBuffer::get_char(std::size_t x, std::size_t y) const
 
 	Char c;
 	c.code                = m_character_data.at(base_address);
-	c.palette_front_entry = (m_character_data.at(base_address + 1) & 0b0000'1111) >> 0; // TODO: use masks::
-	c.palette_back_entry  = (m_character_data.at(base_address + 1) & 0b1111'0000) >> 4;
+	c.palette_front_entry = (m_character_data.at(base_address + 1) & masks::lower_nibble) >> 0;
+	c.palette_back_entry  = (m_character_data.at(base_address + 1) & masks::upper_nibble) >> 4;
 	return c;
 }
 
@@ -116,6 +118,7 @@ void FrameBuffer::update_char(Char c, std::size_t x, std::size_t y)
 		for (std::size_t image_x = x * m_glyph_width; image_x < (x + 1) * m_glyph_width; ++image_x)
 		{
 			std::size_t glyph_base_x = (c.code % 128) * m_glyph_width, glyph_base_y = (c.code / 128) * m_glyph_height;
+
 			std::size_t glyph_x = glyph_base_x + (image_x % m_glyph_width),
 						glyph_y = glyph_base_y + (image_y % m_glyph_height);
 
