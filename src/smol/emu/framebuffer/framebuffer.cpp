@@ -8,11 +8,9 @@ auto FrameBuffer::get_char(std::size_t x, std::size_t y) const -> FrameBuffer::C
 {
 	const std::size_t base_address = (x + y * width) * sizeof_fb_char;
 
-	Char c{};
-	c.code                = m_character_data.at(base_address);
-	c.palette_front_entry = (m_character_data.at(base_address + 1) & masks::lower_nibble) >> 0;
-	c.palette_back_entry  = (m_character_data.at(base_address + 1) & masks::upper_nibble) >> 4;
-	return c;
+	return {.code                = m_character_data.at(base_address),
+			.palette_front_entry = char((m_character_data.at(base_address + 1) & masks::lower_nibble) >> 0),
+			.palette_back_entry  = char((m_character_data.at(base_address + 1) & masks::upper_nibble) >> 4)};
 }
 
 void FrameBuffer::set_palette_entry(std::size_t index, FrameBuffer::PaletteEntry entry)
@@ -28,11 +26,9 @@ auto FrameBuffer::get_palette_entry(std::size_t index) const -> FrameBuffer::Pal
 {
 	const std::size_t base_address = index * sizeof_palette_entry;
 
-	PaletteEntry entry{};
-	entry.r = m_palette_data[base_address];
-	entry.g = m_palette_data[base_address + 1];
-	entry.b = m_palette_data[base_address + 2];
-	return entry;
+	return {.r = Byte(m_palette_data[base_address]),
+			.g = Byte(m_palette_data[base_address + 1]),
+			.b = Byte(m_palette_data[base_address + 2])};
 }
 
 FrameBuffer::FrameBuffer(FrameBufferConfig config) :
