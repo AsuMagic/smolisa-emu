@@ -2,6 +2,8 @@
 #include <iostream>
 #include <stdexcept>
 
+constexpr std::size_t target_width = 80, target_height = 25;
+
 auto main() -> int
 {
 	std::cerr << "Reading file from stdin\n";
@@ -13,13 +15,13 @@ auto main() -> int
 	std::size_t height = 0;
 	std::cin >> width >> height;
 
-	if (width != 80 || height < 25)
+	if (width != target_width || height < target_height)
 	{
 		std::cerr << "Can only handle 80x(25+) video, got " << width << 'x' << height << " instead\n";
 		return 1;
 	}
 
-	if (height > 25)
+	if (height > target_height)
 	{
 		std::cerr << "Truncating height " << height << " to 25\n";
 	}
@@ -33,7 +35,7 @@ auto main() -> int
 		{
 			std::getline(std::cin, line);
 
-			if (y < 25)
+			if (y < target_height)
 			{
 				frame += line;
 			}
@@ -45,9 +47,14 @@ auto main() -> int
 		{
 			std::uint8_t byte = 0;
 
-			for (std::size_t i = 0; i < 8; ++i)
+			constexpr std::size_t pixels_per_byte = 8;
+			for (std::size_t i = 0; i < pixels_per_byte; ++i)
 			{
-				byte |= (frame.at(read) == '#' ? 1 : 0) << i;
+				if (frame.at(read) == '#')
+				{
+					byte |= 1U << i;
+				}
+
 				++read;
 			}
 
