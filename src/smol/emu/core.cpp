@@ -23,8 +23,6 @@ void Core::dispatch()
 		throw std::runtime_error{"Magic quit instruction value encountered."};
 	}
 
-	// FIXME: lots of those don't work as expected when destination and source registers overlap.
-
 	switch (Opcode(instruction & masks::opcode))
 	{
 	case Opcode::Li:
