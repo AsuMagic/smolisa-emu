@@ -22,7 +22,7 @@ project(smolisa-tools)
 # Emulator
 add_executable(smolisa-emu ${SOURCES_COMMON} ${SOURCES_EMULATOR})
 
-target_compile_features(smolisa-emu PRIVATE cxx_std_17)
+target_compile_features(smolisa-emu PRIVATE cxx_std_20)
 target_include_directories(smolisa-emu PRIVATE "src/")
 
 target_link_libraries(smolisa-emu PRIVATE
@@ -33,7 +33,7 @@ target_link_libraries(smolisa-emu PRIVATE
 # Assembler
 add_executable(smolisa-as ${SOURCES_COMMON} ${SOURCES_ASSEMBLER})
 
-target_compile_features(smolisa-as PRIVATE cxx_std_17)
+target_compile_features(smolisa-as PRIVATE cxx_std_20)
 target_include_directories(smolisa-as PRIVATE "src/")
 
 target_link_libraries(smolisa-as PRIVATE fmt)
