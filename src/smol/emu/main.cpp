@@ -61,6 +61,14 @@ auto main(int argc, char** argv) -> int
 	FrameBuffer fb;
 
 	core.mmu.mmio_write_callback = [&](Addr addr, Byte byte) {
+		/*
+		// Display retired instruction count on vsync
+		if (addr == 0x0FD0)
+		{
+			fmt::print(stderr, ">>> retired {} instructions\n", core.retired_instructions);
+		}
+		*/
+
 		if (!fb.set_byte(addr, byte))
 		{
 			throw std::runtime_error{fmt::format("Illegal MMIO write @{:#06x}: {:#04x}\n", addr, byte)};
@@ -95,6 +103,5 @@ auto main(int argc, char** argv) -> int
 
 	while (fb.display())
 	{
-		;
 	}
 }

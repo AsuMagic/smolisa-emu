@@ -3,9 +3,9 @@
 enum class Opcode
 {
 	Li  = 0b0000,
-	Lm  = 0b0001,
-	Sm  = 0b0010,
-	B   = 0b0011,
+	Liu = 0b0001,
+	Lm  = 0b0010,
+	Sm  = 0b0011,
 	Bz  = 0b0100,
 	Bnz = 0b0101,
 	Add = 0b0110,

@@ -16,5 +16,5 @@ static constexpr std::array<std::string_view, 16> register_infos{"$g0",
 																 "$g11",
 																 "$g12",
 																 "$g13",
-																 "$g14",
+																 "$ip",
 																 "$bank"};

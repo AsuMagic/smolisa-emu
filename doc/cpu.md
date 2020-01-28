@@ -14,9 +14,9 @@ The architecture is **little-endian**.
 
 All registers initialize to zero by default, including the instruction pointer.
 
-- `$g0` .. `$g14`: 16-bit general purpose registers
+- `$g0` .. `$g13`: 16-bit general purpose registers
+- `$ip`: Instruction pointer. Contains the instruction pointer to the next instruction, not to the currently executed one. Can be written to for branching.
 - `$bank`: Bank select (see Bank Swapping)
-- Instruction pointer: Internal pointer
 
 ## Instruction cheatsheet
 
@@ -24,10 +24,10 @@ All registers initialize to zero by default, including the instruction pointer.
 |------|--------|-----------------------|------------------------------------------------|----------------------------------------------|
 |      |        |                       | **Data transfer**                              |                                              |
 | I    | `0000` | `li $dst imm8`        | **L**oad **i**mmediate to 8 lower bits         | `$dst[0:7] = imm8`                           |
-| R    | `0001` | `lm $addr $dst`       | **L**oad **m**emory to 8 lower bits            | `$dst[0:7] = mem[$addr]`                     |
-| R    | `0010` | `sm $addr $src`       | **S**tore 8 lower bits to **m**emory           | `mem[$addr] = $src[0:7]`                     |
-|      |        |                       | **Branching**                                  |                                              |
-| R    | `0011` | `b $addr`             | **B**ranch                                     | `pc = $addr`                                 |
+| I    | `0001` | `liu $dst imm8`       | **L**oad **i**mmediate to 8 **u**pper bits     | `$dst[8:15] = imm8`                          |
+| R    | `0010` | `lm $addr $dst`       | **L**oad **m**emory to 8 lower bits            | `$dst[0:7] = mem[$addr]`                     |
+| R    | `0011` | `sm $addr $src`       | **S**tore 8 lower bits to **m**emory           | `mem[$addr] = $src[0:7]`                     |
+|      |        |                       | **Conditional branching**                      |                                              |
 | R    | `0100` | `bz $addr $a`         | **B**ranch if **z**ero                         | `if $a == 0: pc = $addr`                     |
 | R    | `0101` | `bnz $addr $a`        | **B**ranch if **n**ot **z**ero                 | `if $a != 0: pc = $addr`                     |
 |      |        |                       | **Arithmetic**                                 |                                              |

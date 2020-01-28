@@ -22,6 +22,7 @@ struct Core
 	Word                instruction_pointer = 0x0000;
 	std::optional<Word> current_instruction;
 	Mmu                 mmu;
+	// std::size_t         retired_instructions = 0;
 
 	std::function<void(Core&)> panic_handler;
 

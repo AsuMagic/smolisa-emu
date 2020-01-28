@@ -16,7 +16,8 @@ void Core::dispatch()
 	const Word instruction = mmu.get_word(instruction_pointer);
 	current_instruction    = instruction;
 
-	Word next_instruction_pointer = instruction_pointer + sizeof(Word);
+	const auto branch = [this](Addr addr) { registers[RegisterId::Ip] = addr; };
+	branch(instruction_pointer + sizeof(Word));
 
 	if (instruction == 0xFFFF)
 	{
@@ -30,6 +31,14 @@ void Core::dispatch()
 		const auto [rdst, imm8] = formats::TypeI{instruction};
 		registers[rdst] &= masks::upper_byte;
 		registers[rdst] |= imm8;
+		break;
+	}
+
+	case Opcode::Liu:
+	{
+		const auto [rdst, imm8] = formats::TypeI{instruction};
+		registers[rdst] &= masks::lower_byte;
+		registers[rdst] |= imm8 << 8;
 		break;
 	}
 
@@ -48,20 +57,13 @@ void Core::dispatch()
 		break;
 	}
 
-	case Opcode::B:
-	{
-		const auto [raddr, _r2, _r3] = formats::TypeR{instruction};
-		next_instruction_pointer     = registers[raddr];
-		break;
-	}
-
 	case Opcode::Bz:
 	{
 		const auto [raddr, rtest, _r3] = formats::TypeR{instruction};
 
 		if (registers[rtest] == 0)
 		{
-			next_instruction_pointer = registers[raddr];
+			branch(registers[raddr]);
 		}
 
 		break;
@@ -73,7 +75,7 @@ void Core::dispatch()
 
 		if (registers[rtest] != 0)
 		{
-			next_instruction_pointer = registers[raddr];
+			branch(registers[raddr]);
 		}
 
 		break;
@@ -155,7 +157,9 @@ void Core::dispatch()
 	//       Only check for changes when actually accessing memory?
 	registers[RegisterId::Bank] = Word(mmu.set_current_bank(Bank(registers[RegisterId::Bank])));
 
-	instruction_pointer = next_instruction_pointer;
+	instruction_pointer = registers[RegisterId::Ip];
+
+	//++retired_instructions;
 }
 
 void Core::boot()
@@ -178,6 +182,7 @@ auto Core::debug_state() const -> std::string
 		const auto name = [i]() -> std::string {
 			switch (i)
 			{
+			case 14: return "ip";
 			case 15: return "bank";
 			default: return fmt::format("g{}", i);
 			}

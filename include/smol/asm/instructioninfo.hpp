@@ -17,9 +17,9 @@ struct InstructionInfo
 };
 
 static constexpr std::array<InstructionInfo, 16> instruction_infos{{{"li", 2, InstructionType::R8Imm8},
+																	{"liu", 2, InstructionType::R8Imm8},
 																	{"lm", 2, InstructionType::R8R8R8},
 																	{"sm", 2, InstructionType::R8R8R8},
-																	{"b", 1, InstructionType::R8R8R8},
 																	{"bz", 2, InstructionType::R8R8R8},
 																	{"bnz", 2, InstructionType::R8R8R8},
 																	{"add", 3, InstructionType::R8R8R8},

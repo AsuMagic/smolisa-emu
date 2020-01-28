@@ -79,24 +79,21 @@
 ; }
 
 ; char* rom_ptr = (char*)VIDEO_ROM_START_ADDRESS;
-li $g0 0x20
-swb $g0 $g0
+liu $g0 0x20
 li $g0 0x00
 
 ; short rom_bank = VIDEO_ROM_START_BANK;
-xor $g1 $g1 $g1
+liu $g1 0x00
 li $g1 0x01
 
 ; const char* framebuffer_stop_address = 0x2FA1;
-li $g2 0x2F
-swb $g2 $g2
+liu $g2 0x2F
 li $g2 0xA1
 
 ; while(true)
 prepareframe:
 	; char* framebuffer_address = FRAMEBUFFER_START_ADDRESS;
-	li $g3 0x20
-	swb $g3 $g3
+    liu $g3 0x20
 	li $g3 0x01
 
 	; while (framebuffer_address != framebuffer_stop_address)
@@ -108,116 +105,114 @@ prepareframe:
 		lm $g0 $g4
 
 		; set_bank(MMIO_BANK);
-		xor $bank $bank $bank
-		not $bank $bank ; 0xFFFF
+        liu $bank 0xFF
+        li $bank 0xFF
 
 		; const char* char_group_stop_address = framebuffer_address + (8 * 2);
-		xor $g14 $g14 $g14
-		li $g14 16 ; tmp = 16
-		add $g5 $g3 $g14
-		; $g14 freed
+		xor $g13 $g13 $g13
+		li $g13 16 ; tmp = 16
+		add $g5 $g3 $g13
+		; $g13 freed
 
 		; while (framebuffer_address != char_group_stop_address)
 		drawpixelgroup:
 			; bool is_set = (char_group & 0x01) != 0;
-			xor $g14 $g14 $g14
-			li $g14 1 ; tmp = 0x01
-			and $g6 $g4 $g14
-			; $g14 freed
+			xor $g13 $g13 $g13
+			li $g13 1 ; tmp = 0x01
+			and $g6 $g4 $g13
+			; $g13 freed
 
 			; if (is_set)
-			li $g14 setwhite ; FIXME: upper bits
-			bnz $g14 $g6
-			; $g14 freed
+			li $g13 setwhite ; FIXME: upper bits
+			bnz $g13 $g6
+			; $g13 freed
 			setblack:
 				; *framebuffer_address = PALETTE_BLACK;
-				xor $g14 $g14 $g14 ; tmp = 0x00
-				sm $g3 $g14
-				; $g14 freed
+				xor $g13 $g13 $g13 ; tmp = 0x00
+				sm $g3 $g13
+				; $g13 freed
 
 				; (handle branching)
-				li $g14 setcolorend
-				b $g14
-				; $g14 freed
+				li $g13 setcolorend
+                or $ip $g13 $g13
+				; $g13 freed
 
 			setwhite:
 				; *framebuffer_address = PALETTE_BLACK;
-				xor $g14 $g14 $g14
-				li $g14 17 ; tmp = 0x11
-				sm $g3 $g14
-				; $g14 freed
+				xor $g13 $g13 $g13
+				li $g13 17 ; tmp = 0x11
+				sm $g3 $g13
+				; $g13 freed
 				
 				; fallthrough
 
 			setcolorend:
 			; char_group = char_group >> 1;
-			xor $g14 $g14 $g14
-			li $g14 1 ; tmp = 1
-			shr $g4 $g4 $g14
-			; $g14 freed
+			xor $g13 $g13 $g13
+			li $g13 1 ; tmp = 1
+			shr $g4 $g4 $g13
+			; $g13 freed
 
 			; framebuffer_address += 2;
-			xor $g14 $g14 $g14
-			li $g14 2 ; tmp = 2
-			add $g3 $g3 $g14
-			; $g14 freed
+			xor $g13 $g13 $g13
+			li $g13 2 ; tmp = 2
+			add $g3 $g3 $g13
+			; $g13 freed
 
 			; (handle looping)
 			; while (framebuffer_address != char_group_stop_address)
-			xor $g13 $g13 $g13
-			li $g13 drawpixelgroup ; FIXME: upper bits
-			sub $g14 $g3 $g5
-			bnz $g13 $g14
-			; $g13, $g14 freed
+			xor $g12 $g12 $g12
+			li $g12 drawpixelgroup ; FIXME: upper bits
+			sub $g13 $g3 $g5
+			bnz $g12 $g13
+			; $g12, $g13 freed
 
 			; fallthrough
 
 		; rom_ptr += 1;
-		xor $g14 $g14 $g14
-		li $g14 1 ; tmp = 1
-		add $g0 $g0 $g14
-		; $g14 freed
+		xor $g13 $g13 $g13
+		li $g13 1 ; tmp = 1
+		add $g0 $g0 $g13
+		; $g13 freed
 
 		; if (rom_ptr == 0)
 		; => if (rom_ptr != 0) skip
-		xor $g14 $g14 $g14 ; FIXME: upper bits
-		li $g14 skipbankswitch
-		bnz $g14 $g0
-		; $g14 freed
+		xor $g13 $g13 $g13 ; FIXME: upper bits
+		li $g13 skipbankswitch
+		bnz $g13 $g0
+		; $g13 freed
 
 			; rom_ptr = VIDEO_ROM_START_ADDRESS;
-			li $g0 32 ; 0x20
-			swb $g0 $g0
-			li $g0 0 ; 0x00
+            liu $g0 0x20
+            li $g0 0x00
 
 			; rom_bank += 1;
-			xor $g14 $g14 $g14
-			li $g14 1
-			add $g1 $g1 $g14
+			xor $g13 $g13 $g13
+			li $g13 1
+			add $g1 $g1 $g13
 		skipbankswitch:
 
 		; (handle looping)
 		; while (framebuffer_address != framebuffer_stop_address)
-		xor $g13 $g13 $g13
-		li $g13 drawframe
-		sub $g14 $g3 $g2
-		bnz $g13 $g14
-		; $g13, $g14 freed
+		xor $g12 $g12 $g12
+		li $g12 drawframe
+		sub $g13 $g3 $g2
+		bnz $g12 $g13
+		; $g12, $g13 freed
 
 		; fallthrough
 
 	; wait_vsync();
-	li $g14 0x2F
-	swb $g14 $g14
-	li $g14 0xD0
-	sm $g14 $g14 ; the byte we write has no importance
+    liu $g13 0x2F
+	li $g13 0xD0
+	sm $g13 $g13 ; the byte we write has no importance
 
 	; (handle looping)
 	; while (true)
-	xor $g14 $g14 $g14
-	li $g14 prepareframe ; FIXME: upper bits
-	b $g14
-	; $g14 freed
+	xor $g13 $g13 $g13
+	li $g13 prepareframe ; FIXME: upper bits
+    or $ip $g13 $g13
+	; $g13 freed
 
 ; Include the binary video file
 @0x2000
