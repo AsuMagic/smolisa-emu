@@ -57,10 +57,13 @@ auto main(int argc, char** argv) -> int
 	// Copy ROM contents to beginning of RAM
 	std::copy_n(rom.begin(), std::min(rom.size(), core.mmu.ram.size()), core.mmu.ram.begin());
 
+#ifdef SMOLISA_FRAMEBUFFER
 	fmt::print(stderr, "Preparing 80x25 standard framebuffer\n");
 	FrameBuffer fb;
+#endif
 
-	core.mmu.mmio_write_callback = [&](Addr addr, Byte byte) {
+	core.mmu.mmio_write_callback = [&]([[maybe_unused]] Addr addr, [[maybe_unused]] Byte byte) {
+#ifdef SMOLISA_FRAMEBUFFER
 		/*
 		// Display retired instruction count on vsync
 		if (addr == 0x0FD0)
@@ -73,12 +76,22 @@ auto main(int argc, char** argv) -> int
 		{
 			throw std::runtime_error{fmt::format("Illegal MMIO write @{:#06x}: {:#04x}\n", addr, byte)};
 		}
+#endif
 	};
 
 	core.mmu.mmio_read_callback = [&](Addr addr) -> Byte {
 		try
 		{
-			return fb.get_byte(addr).value();
+			std::optional<Byte> value;
+
+#ifdef SMOLISA_FRAMEBUFFER
+			if (!value)
+			{
+				value = fb.get_byte(addr);
+			}
+#endif
+
+			return value.value();
 		}
 		catch (const std::exception& e)
 		{
@@ -97,11 +110,15 @@ auto main(int argc, char** argv) -> int
 	{
 		const std::string error = fmt::format("Emulator caught fire: {}{}\n", e.what(), core.debug_state());
 
+#ifdef SMOLISA_FRAMEBUFFER
 		fb.display_simple_string(error, 0, 1);
 		fmt::print(stderr, "{}", error);
+#endif
 	}
 
+#ifdef SMOLISA_FRAMEBUFFER
 	while (fb.display())
 	{
 	}
+#endif
 }

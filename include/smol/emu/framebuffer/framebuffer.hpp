@@ -1,11 +1,13 @@
 #pragma once
 
-#include "smol/common/types.hpp"
+#ifdef SMOLISA_FRAMEBUFFER
 
-#include <SFML/Graphics.hpp>
-#include <cstddef>
-#include <optional>
-#include <vector>
+#	include "smol/common/types.hpp"
+
+#	include <SFML/Graphics.hpp>
+#	include <cstddef>
+#	include <optional>
+#	include <vector>
 
 struct FrameBufferConfig
 {
@@ -77,3 +79,5 @@ class FrameBuffer
 
 	std::size_t m_glyph_width, m_glyph_height;
 };
+
+#endif
