@@ -17,8 +17,8 @@ Assembler::Assembler(std::string_view source) : tokenizer{source}
 			[this](tokens::Label m) { handle_label_declaration(m); },
 			[this](tokens::SelectOffset m) { handle_select_offset(m); },
 			[this](tokens::IncludeBinaryFile m) { handle_binary_include(m); },
-			[&](tokens::Newline /*unused*/) { ++context.line; },
-			[&](tokens::Eof /*unused*/) { done = true; });
+			[&]([[maybe_unused]] tokens::Newline) { ++context.line; },
+			[&]([[maybe_unused]] tokens::Eof) { done = true; });
 	}
 
 	if (!link_labels())
@@ -81,7 +81,7 @@ void Assembler::expect_newline()
 
 void Assembler::handle_label_declaration(tokens::Label label)
 {
-	visit_next_token("colon after label declaration", [&](tokens::Colon /*unused*/) {
+	visit_next_token("colon after label declaration", [&]([[maybe_unused]] tokens::Colon) {
 		label_definitions.push_back({context, label.name});
 	});
 

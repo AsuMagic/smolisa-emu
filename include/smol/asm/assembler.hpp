@@ -68,7 +68,7 @@ class Assembler
 	{
 		const auto token = tokenizer.consume_token();
 
-		const auto unexpected_handler = [&]([[maybe_unused]] const auto& token) -> R {
+		const auto unexpected_handler = [&](const auto& token) -> R {
 			diagnostic(context, "Expected {}, got {}\n", expected, token_name(token));
 			throw std::runtime_error{"Assembler error"};
 		};
