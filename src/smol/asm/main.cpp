@@ -30,7 +30,6 @@ auto main(int argc, char** argv) -> int
 		}
 
 		// TODO: allow to put arbitrary bytes
-		// TODO: allowing to load low and high bits of address!!
 	}
 	catch (const std::exception& e)
 	{
