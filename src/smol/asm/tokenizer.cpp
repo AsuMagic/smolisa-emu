@@ -226,7 +226,7 @@ auto Tokenizer::parse_string_literal() -> std::string_view
 	return offset_string;
 }
 
-auto Tokenizer::skip_spaces() -> void
+void Tokenizer::skip_spaces()
 {
 	// Strip whitespace
 	while (is_space(m_last) && (read() != 0))
