@@ -2,7 +2,9 @@
 
 #include <fmt/core.h>
 
-Tokenizer::Tokenizer(std::string_view source) : m_source{source}, m_it{m_source.begin()} {}
+Tokenizer::Tokenizer(std::string_view source) :
+	m_source{source}, m_it{m_source.begin()}, m_token_begin_it{m_source.begin()}
+{}
 
 auto Tokenizer::consume_token() -> Token
 {
@@ -92,7 +94,8 @@ auto Tokenizer::consume_token() -> Token
 		{
 			return tokens::ByteSelector{.is_upper_byte = false};
 		}
-		else if (str == "~high")
+
+		if (str == "~high")
 		{
 			return tokens::ByteSelector{.is_upper_byte = true};
 		}
