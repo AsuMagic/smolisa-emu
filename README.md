@@ -4,6 +4,8 @@ Assembler, emulator, documentation and demos for the smolisa architecture.
 
 ## Quick start
 
+- [Instruction set documentation](doc/cpu.md)
+
 ### Compiling (*nix)
 
 You require a recent CMake and C++ compiler that partially supports C++20.
