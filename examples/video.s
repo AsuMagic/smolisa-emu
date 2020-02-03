@@ -78,7 +78,7 @@
 ;   wait_vsync();
 ; }
 
-@0x0000
+#offset 0x0000
 
 ; char* rom_ptr = (char*)VIDEO_ROM_START_ADDRESS;
 liu $g0 0x20
@@ -219,5 +219,5 @@ prepareframe:
 	; $g13 freed
 
 ; Include the binary video file
-@0x2000
-#./assets/badapple.bin
+#offset 0x2000
+#binary "./assets/badapple.bin"

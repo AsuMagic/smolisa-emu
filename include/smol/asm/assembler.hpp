@@ -57,8 +57,9 @@ class Assembler
 
 	void handle_label_declaration(tokens::Label label);
 	void handle_instruction(tokens::Mnemonic mnemonic);
-	void handle_select_offset(tokens::SelectOffset select_offset);
-	void handle_binary_include(tokens::IncludeBinaryFile include);
+	void handle_directive(tokens::Directive directive);
+	void handle_select_offset(std::size_t select_offset);
+	void handle_binary_include(std::string_view include_path);
 
 	auto read_register_name() -> RegisterId;
 	auto read_immediate() -> Byte;

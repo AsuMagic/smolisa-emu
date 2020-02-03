@@ -35,17 +35,18 @@ struct ByteSelector
 
 struct Immediate
 {
-	Byte value;
+	std::size_t value;
 };
 
-struct SelectOffset
+struct StringLiteral
 {
-	std::size_t address;
+	std::string_view text;
 };
 
-struct IncludeBinaryFile
+enum class Directive
 {
-	std::string_view path;
+	ByteOffset,
+	IncludeBinaryFile
 };
 
 struct Newline
@@ -62,8 +63,8 @@ using Token = std::variant<
 	tokens::Label,
 	tokens::ByteSelector,
 	tokens::Immediate,
-	tokens::SelectOffset,
-	tokens::IncludeBinaryFile,
+	tokens::StringLiteral,
+	tokens::Directive,
 	tokens::Colon,
 	tokens::Newline,
 	tokens::Eof>;
@@ -76,8 +77,8 @@ inline auto token_name(const Token& token) -> std::string_view
 					  "label",
 					  "byte selector",
 					  "immediate",
-					  "offset selection",
-					  "include binary file",
+					  "string literal",
+					  "assembler directive",
 					  "colon",
 					  "newline",
 					  "eof"}

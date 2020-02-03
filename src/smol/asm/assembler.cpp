@@ -15,8 +15,7 @@ Assembler::Assembler(std::string_view source) : tokenizer{source}
 			"mnemonic, label declaration or any assembler directive",
 			[this](tokens::Mnemonic m) { handle_instruction(m); },
 			[this](tokens::Label m) { handle_label_declaration(m); },
-			[this](tokens::SelectOffset m) { handle_select_offset(m); },
-			[this](tokens::IncludeBinaryFile m) { handle_binary_include(m); },
+			[this](tokens::Directive m) { handle_directive(m); },
 			[&]([[maybe_unused]] tokens::Newline) { ++context.line; },
 			[&]([[maybe_unused]] tokens::Eof) { done = true; });
 	}
@@ -139,18 +138,41 @@ void Assembler::handle_instruction(tokens::Mnemonic mnemonic)
 	expect_newline();
 }
 
-void Assembler::handle_select_offset(tokens::SelectOffset select_offset)
+void Assembler::handle_directive(tokens::Directive directive)
+{
+	switch (directive)
+	{
+	case tokens::Directive::ByteOffset:
+	{
+		const auto offset = visit_next_token<std::size_t>(
+			"byte offset immediate value", [](tokens::Immediate immediate) { return immediate.value; });
+		handle_select_offset(offset);
+		break;
+	}
+
+	case tokens::Directive::IncludeBinaryFile:
+	{
+		const auto text = visit_next_token<std::string_view>(
+			"binary file path string", [](tokens::StringLiteral literal) { return literal.text; });
+
+		handle_binary_include(text);
+		break;
+	}
+	}
+}
+
+void Assembler::handle_select_offset(std::size_t select_offset)
 {
 	// TODO: allow setting the offset in the past
-	context.instruction_offset = select_offset.address;
-	program_output.resize(select_offset.address);
+	context.instruction_offset = select_offset;
+	program_output.resize(select_offset);
 
 	expect_newline();
 }
 
-void Assembler::handle_binary_include(tokens::IncludeBinaryFile include)
+void Assembler::handle_binary_include(std::string_view include_path)
 {
-	const auto content = load_file_raw(include.path);
+	const auto content = load_file_raw(include_path);
 	program_output.insert(program_output.end(), content.begin(), content.end());
 	context.instruction_offset += content.size();
 
@@ -173,7 +195,7 @@ auto Assembler::read_immediate() -> Byte
 				"byte selector '~'", [](tokens::ByteSelector offset) { return offset; });
 			label_uses.push_back({context, label.name, offset_token.is_upper_byte ? 8u : 0u});
 		},
-		[&](tokens::Immediate immediate) { byte = immediate.value; });
+		[&](tokens::Immediate immediate) { byte = Byte(immediate.value); });
 
 	return byte;
 }

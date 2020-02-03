@@ -17,12 +17,17 @@ class Tokenizer
 
 	auto consume_token() -> Token;
 
+	auto dump_context() const -> void;
+
 	private:
 	auto read() -> char;
 
 	auto token_string() const -> std::string_view;
 
 	auto parse_integral() -> std::size_t;
+	auto parse_string_literal() -> std::string_view;
+
+	auto skip_spaces() -> void;
 
 	std::string_view                 m_source;
 	std::string_view::const_iterator m_it, m_token_begin_it;

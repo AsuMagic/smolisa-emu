@@ -232,6 +232,7 @@ auto FrameBuffer::get_byte(Addr addr) const -> std::optional<Byte>
 	case Region::FrameData: return m_character_data[addr - pixel_data_address];
 	case Region::PaletteData: return m_palette_data[addr - palette_address];
 	case Region::VsyncWait:
-	case Region::Invalid: return std::nullopt;
+	case Region::Invalid:
+	default: return std::nullopt;
 	}
 }

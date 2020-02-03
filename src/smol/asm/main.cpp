@@ -22,7 +22,7 @@ auto main(int argc, char** argv) -> int
 
 		const auto source_path = args[0];
 		const auto source      = load_file_raw(source_path);
-		Assembler  assembler{source.data()};
+		Assembler  assembler{std::string_view{source.data(), source.size()}};
 
 		for (Byte byte : assembler.program_output)
 		{

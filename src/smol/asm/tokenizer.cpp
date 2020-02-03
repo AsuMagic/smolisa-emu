@@ -1,5 +1,7 @@
 #include "smol/asm/tokenizer.hpp"
 
+#include <fmt/core.h>
+
 Tokenizer::Tokenizer(std::string_view source) : m_source{source}, m_it{m_source.begin()} {}
 
 auto Tokenizer::consume_token() -> Token
@@ -9,10 +11,7 @@ auto Tokenizer::consume_token() -> Token
 		return tokens::Eof{};
 	}
 
-	// Strip whitespace
-	while (is_space(m_last) && (read() != 0))
-	{
-	}
+	skip_spaces();
 
 	if (m_last == ';')
 	{
@@ -33,22 +32,29 @@ auto Tokenizer::consume_token() -> Token
 
 	m_token_begin_it = m_it - 1;
 
-	if (m_last == '@')
-	{
-		m_token_begin_it = m_it;
-		return tokens::SelectOffset{parse_integral()};
-	}
-
+	// Assembler directive
 	if (m_last == '#')
 	{
-		while (!is_newline(read()) && m_it != m_source.end())
+		while (is_alpha(read()))
 		{
 		}
 
-		auto offset_string = token_string();
-		offset_string.remove_prefix(1);
+		--m_it;
 
-		return tokens::IncludeBinaryFile{offset_string};
+		const auto str = token_string();
+
+		if (str == "#binary")
+		{
+			return tokens::Directive::IncludeBinaryFile;
+		}
+
+		if (str == "#offset")
+		{
+			m_token_begin_it = m_it;
+			return tokens::Directive::ByteOffset;
+		}
+
+		return std::monostate{};
 	}
 
 	if (m_last == '\'')
@@ -63,6 +69,11 @@ auto Tokenizer::consume_token() -> Token
 		return std::monostate{};
 	}
 
+	if (m_last == '\"')
+	{
+		return tokens::StringLiteral{parse_string_literal()};
+	}
+
 	if (m_last == '~')
 	{
 		while (is_alpha(read()))
@@ -75,7 +86,7 @@ auto Tokenizer::consume_token() -> Token
 			--m_it;
 		}
 
-		auto str = token_string();
+		const auto str = token_string();
 
 		if (str == "~low")
 		{
@@ -122,7 +133,7 @@ auto Tokenizer::consume_token() -> Token
 
 	if (is_digit(m_last))
 	{
-		return tokens::Immediate{Byte(parse_integral())};
+		return tokens::Immediate{parse_integral()};
 	}
 
 	// Check one last time whether we got EOF
@@ -132,6 +143,16 @@ auto Tokenizer::consume_token() -> Token
 	}
 
 	return std::monostate{};
+}
+
+void Tokenizer::dump_context() const
+{
+	fmt::print(
+		stderr,
+		"String: {}\nIt pair ({}, {})\n",
+		token_string(),
+		std::distance(m_source.begin(), m_it),
+		std::distance(m_source.begin(), m_token_begin_it));
 }
 
 auto Tokenizer::read() -> char
@@ -181,7 +202,34 @@ auto Tokenizer::parse_integral() -> std::size_t
 	}
 	catch (const std::exception& e)
 	{
-		// TODO: diagnostic here
 		throw;
+	}
+}
+
+auto Tokenizer::parse_string_literal() -> std::string_view
+{
+	m_token_begin_it = m_it;
+	read();
+
+	while (m_last != '"' && !is_newline(read()) && m_it != m_source.end())
+	{
+	}
+
+	if (m_last != '"')
+	{
+		throw std::runtime_error{"String literal must end with double quotes '\"' before the end of the line"};
+	}
+
+	auto offset_string = token_string();
+	offset_string.remove_suffix(1);
+
+	return offset_string;
+}
+
+auto Tokenizer::skip_spaces() -> void
+{
+	// Strip whitespace
+	while (is_space(m_last) && (read() != 0))
+	{
 	}
 }
