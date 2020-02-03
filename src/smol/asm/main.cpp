@@ -24,10 +24,8 @@ auto main(int argc, char** argv) -> int
 		const auto source      = load_file_raw(source_path);
 		Assembler  assembler{std::string_view{source.data(), source.size()}};
 
-		for (Byte byte : assembler.program_output)
-		{
-			std::cout.put(byte);
-		}
+		std::cout.write(
+			reinterpret_cast<const char*>(assembler.program_output.data()), assembler.program_output.size());
 
 		// TODO: allow to put arbitrary bytes
 	}
