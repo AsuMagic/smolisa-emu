@@ -5,6 +5,7 @@ Assembler, emulator, documentation and demos for the smolisa architecture.
 ## Quick start
 
 - [Instruction set documentation](doc/cpu.md)
+- [Assembler documentation](doc/asm.md)
 
 ### Compiling (*nix)
 
