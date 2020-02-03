@@ -20,8 +20,12 @@ class Tokenizer
 	private:
 	auto read() -> char;
 
+	auto token_string() const -> std::string_view;
+
+	auto parse_integral() -> std::size_t;
+
 	std::string_view                 m_source;
-	std::string_view::const_iterator m_it;
+	std::string_view::const_iterator m_it, m_token_begin_it;
 
 	char m_last = '\0';
 };

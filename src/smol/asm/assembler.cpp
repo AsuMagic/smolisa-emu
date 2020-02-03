@@ -169,8 +169,8 @@ auto Assembler::read_immediate() -> Byte
 	visit_next_token(
 		"immediate value or label",
 		[&](tokens::Label label) {
-			const auto offset_token = visit_next_token<tokens::ByteOffset>(
-				"byte selector '~'", [](tokens::ByteOffset offset) { return offset; });
+			const auto offset_token = visit_next_token<tokens::ByteSelector>(
+				"byte selector '~'", [](tokens::ByteSelector offset) { return offset; });
 			label_uses.push_back({context, label.name, offset_token.is_upper_byte ? 8u : 0u});
 		},
 		[&](tokens::Immediate immediate) { byte = immediate.value; });

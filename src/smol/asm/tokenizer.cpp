@@ -31,47 +31,11 @@ auto Tokenizer::consume_token() -> Token
 		return tokens::Colon{};
 	}
 
-	auto token_begin_it = m_it - 1;
-
-	auto token_string = [&]() -> std::string_view {
-		return {&*token_begin_it, std::size_t(std::distance(token_begin_it, m_it))};
-	};
-
-	const auto parse_integral = [&] {
-		while (!is_space(m_last) && !is_newline(m_last) && (read() != 0))
-		{
-		}
-
-		if (m_it != m_source.end())
-		{
-			// Backtrack just once
-			--m_it;
-		}
-
-		auto integral_string = token_string();
-
-		int base = 10;
-
-		if (integral_string.starts_with("0x"))
-		{
-			integral_string.remove_prefix(2);
-			base = 16;
-		}
-
-		try
-		{
-			return std::stoul(std::string{integral_string}, nullptr, base);
-		}
-		catch (const std::exception& e)
-		{
-			// TODO: diagnostic here
-			throw;
-		}
-	};
+	m_token_begin_it = m_it - 1;
 
 	if (m_last == '@')
 	{
-		token_begin_it = m_it;
+		m_token_begin_it = m_it;
 		return tokens::SelectOffset{parse_integral()};
 	}
 
@@ -112,15 +76,14 @@ auto Tokenizer::consume_token() -> Token
 		}
 
 		auto str = token_string();
-		str.remove_prefix(1);
 
-		if (str == "low")
+		if (str == "~low")
 		{
-			return tokens::ByteOffset{.is_upper_byte = false};
+			return tokens::ByteSelector{.is_upper_byte = false};
 		}
-		else if (str == "high")
+		else if (str == "~high")
 		{
-			return tokens::ByteOffset{.is_upper_byte = true};
+			return tokens::ByteSelector{.is_upper_byte = true};
 		}
 
 		return std::monostate{};
@@ -183,4 +146,42 @@ auto Tokenizer::read() -> char
 
 	m_last = '\0';
 	return m_last;
+}
+
+auto Tokenizer::token_string() const -> std::string_view
+{
+	return {&*m_token_begin_it, std::size_t(std::distance(m_token_begin_it, m_it))};
+}
+
+auto Tokenizer::parse_integral() -> std::size_t
+{
+	while (!is_space(m_last) && !is_newline(m_last) && (read() != 0))
+	{
+	}
+
+	if (m_it != m_source.end())
+	{
+		// Backtrack just once
+		--m_it;
+	}
+
+	auto integral_string = token_string();
+
+	int base = 10;
+
+	if (integral_string.starts_with("0x"))
+	{
+		integral_string.remove_prefix(2);
+		base = 16;
+	}
+
+	try
+	{
+		return std::stoul(std::string{integral_string}, nullptr, base);
+	}
+	catch (const std::exception& e)
+	{
+		// TODO: diagnostic here
+		throw;
+	}
 }

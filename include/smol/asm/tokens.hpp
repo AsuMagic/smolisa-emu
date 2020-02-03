@@ -28,7 +28,7 @@ struct Label
 	std::string_view name;
 };
 
-struct ByteOffset
+struct ByteSelector
 {
 	bool is_upper_byte;
 };
@@ -60,7 +60,7 @@ using Token = std::variant<
 	tokens::Mnemonic,
 	tokens::RegisterReference,
 	tokens::Label,
-	tokens::ByteOffset,
+	tokens::ByteSelector,
 	tokens::Immediate,
 	tokens::SelectOffset,
 	tokens::IncludeBinaryFile,
