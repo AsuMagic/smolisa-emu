@@ -3,7 +3,7 @@
 ## Usage
 
 ```sh
-smolisa-as /path/to/assembler >./output.img
+smolisa-as /path/to/source.s >./output.img
 ```
 
 ## Syntax
