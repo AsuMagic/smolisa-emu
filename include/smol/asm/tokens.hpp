@@ -28,6 +28,11 @@ struct Label
 	std::string_view name;
 };
 
+struct ByteOffset
+{
+	bool is_upper_byte;
+};
+
 struct Immediate
 {
 	Byte value;
@@ -55,6 +60,7 @@ using Token = std::variant<
 	tokens::Mnemonic,
 	tokens::RegisterReference,
 	tokens::Label,
+	tokens::ByteOffset,
 	tokens::Immediate,
 	tokens::SelectOffset,
 	tokens::IncludeBinaryFile,
@@ -68,6 +74,7 @@ inline auto token_name(const Token& token) -> std::string_view
 					  "mnemonic",
 					  "register name",
 					  "label",
+					  "byte selector",
 					  "immediate",
 					  "offset selection",
 					  "include binary file",

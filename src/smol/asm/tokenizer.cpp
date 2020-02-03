@@ -99,6 +99,33 @@ auto Tokenizer::consume_token() -> Token
 		return std::monostate{};
 	}
 
+	if (m_last == '~')
+	{
+		while (is_alpha(read()))
+		{
+		}
+
+		if (m_it != m_source.end())
+		{
+			// Backtrack just once
+			--m_it;
+		}
+
+		auto str = token_string();
+		str.remove_prefix(1);
+
+		if (str == "low")
+		{
+			return tokens::ByteOffset{.is_upper_byte = false};
+		}
+		else if (str == "high")
+		{
+			return tokens::ByteOffset{.is_upper_byte = true};
+		}
+
+		return std::monostate{};
+	}
+
 	if (is_identifier_begin(m_last) || m_last == '$')
 	{
 		while (is_identifier(read()))

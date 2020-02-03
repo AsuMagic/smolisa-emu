@@ -78,6 +78,8 @@
 ;   wait_vsync();
 ; }
 
+@0x0000
+
 ; char* rom_ptr = (char*)VIDEO_ROM_START_ADDRESS;
 liu $g0 0x20
 li $g0 0x00
@@ -123,7 +125,8 @@ prepareframe:
 			; $g13 freed
 
 			; if (is_set)
-			li $g13 setwhite ; FIXME: upper bits
+            liu $g13 setwhite~high
+            li $g13 setwhite~low
 			bnz $g13 $g6
 			; $g13 freed
 			setblack:
@@ -133,7 +136,8 @@ prepareframe:
 				; $g13 freed
 
 				; (handle branching)
-				li $g13 setcolorend
+				liu $g13 setcolorend~high
+				li $g13 setcolorend~low
                 or $ip $g13 $g13
 				; $g13 freed
 
@@ -161,8 +165,8 @@ prepareframe:
 
 			; (handle looping)
 			; while (framebuffer_address != char_group_stop_address)
-			xor $g12 $g12 $g12
-			li $g12 drawpixelgroup ; FIXME: upper bits
+			liu $g12 drawpixelgroup~high
+			li $g12 drawpixelgroup~low ; FIXME: upper bits
 			sub $g13 $g3 $g5
 			bnz $g12 $g13
 			; $g12, $g13 freed
@@ -177,8 +181,8 @@ prepareframe:
 
 		; if (rom_ptr == 0)
 		; => if (rom_ptr != 0) skip
-		xor $g13 $g13 $g13 ; FIXME: upper bits
-		li $g13 skipbankswitch
+		liu $g13 skipbankswitch~high
+		li $g13 skipbankswitch~low
 		bnz $g13 $g0
 		; $g13 freed
 
@@ -194,8 +198,8 @@ prepareframe:
 
 		; (handle looping)
 		; while (framebuffer_address != framebuffer_stop_address)
-		xor $g12 $g12 $g12
-		li $g12 drawframe
+		liu $g12 drawframe~high
+		li $g12 drawframe~low
 		sub $g13 $g3 $g2
 		bnz $g12 $g13
 		; $g12, $g13 freed
@@ -209,8 +213,8 @@ prepareframe:
 
 	; (handle looping)
 	; while (true)
-	xor $g13 $g13 $g13
-	li $g13 prepareframe ; FIXME: upper bits
+	liu $g13 prepareframe~high
+	li $g13 prepareframe~low
     or $ip $g13 $g13
 	; $g13 freed
 
