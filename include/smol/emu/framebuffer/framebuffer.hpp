@@ -34,8 +34,13 @@ class FrameBuffer
 		Byte r, g, b;
 	};
 
-	static constexpr Addr pixel_data_address = 0x0000;
-	static constexpr Addr palette_address    = 0x0FA0;
+	static constexpr Addr pixel_data_address     = 0x0000;
+	static constexpr Addr pixel_data_end_address = 0x0F9F;
+
+	static constexpr Addr palette_address     = 0x0FA0;
+	static constexpr Addr palette_end_address = 0x0FCF;
+
+	static constexpr Addr vsync_wait_address = 0x0FD0;
 
 	static constexpr std::size_t width = 80, height = 25;
 

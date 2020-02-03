@@ -41,7 +41,7 @@ FrameBuffer::FrameBuffer(FrameBufferConfig config) :
 	m_glyph_width  = m_font.getSize().x / 256;
 	m_glyph_height = m_font.getSize().y;
 
-	m_image.create(width * m_glyph_width, height * m_glyph_height);
+	m_image.create(unsigned(width * m_glyph_width), unsigned(height * m_glyph_height));
 
 	m_window.create(sf::VideoMode{m_image.getSize().x, m_image.getSize().y}, "smolisa framebuffer");
 	m_window.setVerticalSyncEnabled(true);
@@ -128,9 +128,9 @@ void FrameBuffer::update_char(Char c, std::size_t x, std::size_t y)
 			const std::size_t glyph_x = glyph_base_x + (image_x % m_glyph_width);
 			const std::size_t glyph_y = glyph_base_y + (image_y % m_glyph_height);
 
-			const bool set = m_font.getPixel(glyph_x, glyph_y).r > 127;
+			const bool set = m_font.getPixel(unsigned(glyph_x), unsigned(glyph_y)).r > 127;
 
-			m_image.setPixel(image_x, image_y, set ? front_color : back_color);
+			m_image.setPixel(unsigned(image_x), unsigned(image_y), set ? front_color : back_color);
 		}
 	}
 }
@@ -163,7 +163,7 @@ void FrameBuffer::display_simple_string(std::string_view s, std::size_t origin_x
 			y = 0;
 		}
 
-		const Addr addr = (x + y * width) * sizeof_fb_char;
+		const auto addr = Addr((x + y * width) * sizeof_fb_char);
 		set_byte(addr, i);
 		set_byte(addr + 1, 0b0010'0001); // Alert color
 
@@ -173,17 +173,17 @@ void FrameBuffer::display_simple_string(std::string_view s, std::size_t origin_x
 
 auto FrameBuffer::byte_region(Addr addr) -> FrameBuffer::Region
 {
-	if (addr >= 0x0000 && addr <= 0x0F9F)
+	if (addr >= pixel_data_address && addr <= pixel_data_end_address)
 	{
 		return Region::FrameData;
 	}
 
-	if (addr >= 0x0FA0 && addr <= 0x0FCF)
+	if (addr >= palette_address && addr <= palette_end_address)
 	{
 		return Region::PaletteData;
 	}
 
-	if (addr == 0x0FD0)
+	if (addr == vsync_wait_address)
 	{
 		return Region::VsyncWait;
 	}
