@@ -158,6 +158,20 @@ void Assembler::handle_directive(tokens::Directive directive)
 		handle_binary_include(text);
 		break;
 	}
+
+	case tokens::Directive::ImmediateLabel:
+	{
+		const auto name
+			= visit_next_token<std::string_view>("label name", [](tokens::Label label) { return label.name; });
+
+		const auto value = visit_next_token<unsigned long long>(
+			"immediate value", [](tokens::Immediate immediate) { return immediate.value; });
+
+		label_definitions.push_back(
+			{Context{.source_path = context.source_path, .line = context.line, .instruction_offset = value}, name});
+
+		break;
+	}
 	}
 }
 

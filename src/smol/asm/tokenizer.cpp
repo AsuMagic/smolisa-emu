@@ -52,8 +52,12 @@ auto Tokenizer::consume_token() -> Token
 
 		if (str == "#offset")
 		{
-			m_token_begin_it = m_it;
 			return tokens::Directive::ByteOffset;
+		}
+
+		if (str == "#label")
+		{
+			return tokens::Directive::ImmediateLabel;
 		}
 
 		return std::monostate{};

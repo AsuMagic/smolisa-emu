@@ -46,7 +46,8 @@ struct StringLiteral
 enum class Directive
 {
 	ByteOffset,
-	IncludeBinaryFile
+	IncludeBinaryFile,
+	ImmediateLabel
 };
 
 struct Newline
