@@ -172,6 +172,27 @@ void Assembler::handle_directive(tokens::Directive directive)
 
 		break;
 	}
+
+	case tokens::Directive::Byte:
+	{
+		const auto value = visit_next_token<unsigned long long>(
+			"immediate value", [](tokens::Immediate immediate) { return immediate.value; });
+
+		emit(Byte(value));
+
+		break;
+	}
+
+	case tokens::Directive::Word:
+	{
+		const auto value = visit_next_token<unsigned long long>(
+			"immediate value", [](tokens::Immediate immediate) { return immediate.value; });
+
+		emit(Byte(value >> 0));
+		emit(Byte(value >> 8));
+
+		break;
+	}
 	}
 }
 

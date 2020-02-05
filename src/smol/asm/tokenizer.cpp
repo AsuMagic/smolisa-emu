@@ -60,6 +60,16 @@ auto Tokenizer::consume_token() -> Token
 			return tokens::Directive::ImmediateLabel;
 		}
 
+		if (str == "#byte")
+		{
+			return tokens::Directive::Byte;
+		}
+
+		if (str == "#word")
+		{
+			return tokens::Directive::Word;
+		}
+
 		return std::monostate{};
 	}
 

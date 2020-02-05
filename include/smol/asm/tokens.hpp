@@ -47,7 +47,9 @@ enum class Directive
 {
 	ByteOffset,
 	IncludeBinaryFile,
-	ImmediateLabel
+	ImmediateLabel,
+	Byte,
+	Word
 };
 
 struct Newline
