@@ -80,3 +80,9 @@ void Mmu::set_byte(Addr addr, Byte data)
 }
 
 auto Mmu::get_word(Addr addr) const -> Word { return (get_byte(addr + 0) << 0) | (get_byte(addr + 1) << 8); }
+
+void Mmu::set_word(Addr addr, Word data)
+{
+	set_byte(addr, Byte(data & 0xFF));
+	set_byte(addr + 1, Byte((data >> 8) & 0xFF));
+}

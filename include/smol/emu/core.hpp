@@ -5,6 +5,7 @@
 
 #include <array>
 #include <optional>
+#include <string>
 
 struct RegisterFile
 {
@@ -16,10 +17,15 @@ struct RegisterFile
 	auto operator[](RegisterId id) const -> const Word& { return data.at(std::size_t(id)); }
 };
 
+enum class DebugTraceStyle
+{
+	Multiline,
+	Oneline
+};
+
 struct Core
 {
 	RegisterFile        registers;
-	Word                instruction_pointer = 0x0000;
 	std::optional<Word> current_instruction;
 	Mmu                 mmu;
 	// std::size_t         retired_instructions = 0;
@@ -29,5 +35,6 @@ struct Core
 	void dispatch();
 	void boot();
 
-	[[nodiscard]] auto debug_state() const -> std::string;
+	[[nodiscard]] auto debug_state(DebugTraceStyle style) const -> std::string;
+	void               trace(std::ostream& out);
 };

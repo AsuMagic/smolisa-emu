@@ -43,4 +43,5 @@ struct Mmu
 	void               set_byte(Addr addr, Byte data);
 
 	[[nodiscard]] auto get_word(Addr addr) const -> Word;
+	void               set_word(Addr addr, Word data);
 };

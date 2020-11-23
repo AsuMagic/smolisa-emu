@@ -8,21 +8,15 @@
 
 void Core::dispatch()
 {
-	if ((instruction_pointer & 0b1) != 0)
+	if ((registers[RegisterId::Ip] & 0b1) != 0)
 	{
 		throw std::runtime_error{"Invalid alignment: Instruction pointer should be aligned to 2 bytes"};
 	}
 
-	const Word instruction = mmu.get_word(instruction_pointer);
+	const Word instruction = mmu.get_word(registers[RegisterId::Ip]);
 	current_instruction    = instruction;
 
-	const auto branch = [this](Addr addr) { registers[RegisterId::Ip] = addr; };
-	branch(instruction_pointer + sizeof(Word));
-
-	if (instruction == 0xFFFF)
-	{
-		throw std::runtime_error{"Magic quit instruction value encountered."};
-	}
+	registers[RegisterId::Ip] += sizeof(Word);
 
 	switch (Opcode(instruction & masks::opcode))
 	{
@@ -42,7 +36,7 @@ void Core::dispatch()
 		break;
 	}
 
-	case Opcode::Lm:
+	case Opcode::Lb:
 	{
 		const auto [raddr, rdst, _r3] = formats::TypeR{instruction};
 		registers[rdst] &= masks::upper_byte;
@@ -50,32 +44,46 @@ void Core::dispatch()
 		break;
 	}
 
-	case Opcode::Sm:
+	case Opcode::Sb:
 	{
 		const auto [raddr, rsrc, _r3] = formats::TypeR{instruction};
 		mmu.set_byte(registers[raddr], registers[rsrc] & masks::lower_byte);
 		break;
 	}
 
-	case Opcode::Bz:
+	case Opcode::Lw:
 	{
-		const auto [raddr, rtest, _r3] = formats::TypeR{instruction};
+		const auto [raddr, rdst, _r3] = formats::TypeR{instruction};
+		registers[rdst]               = mmu.get_word(registers[raddr]);
+		break;
+	}
 
-		if (registers[rtest] == 0)
+	case Opcode::Sw:
+	{
+		const auto [raddr, rsrc, _r3] = formats::TypeR{instruction};
+		mmu.set_word(registers[raddr], registers[rsrc]);
+		break;
+	}
+
+	case Opcode::Lrz:
+	{
+		const auto [rdst, rsrc, rcond] = formats::TypeR{instruction};
+
+		if (registers[rcond] == 0)
 		{
-			branch(registers[raddr]);
+			registers[rdst] = registers[rsrc];
 		}
 
 		break;
 	}
 
-	case Opcode::Bnz:
+	case Opcode::Lrnz:
 	{
-		const auto [raddr, rtest, _r3] = formats::TypeR{instruction};
+		const auto [rdst, rsrc, rcond] = formats::TypeR{instruction};
 
-		if (registers[rtest] != 0)
+		if (registers[rcond] != 0)
 		{
-			branch(registers[raddr]);
+			registers[rdst] = registers[rsrc];
 		}
 
 		break;
@@ -94,13 +102,6 @@ void Core::dispatch()
 	{
 		const auto [rdst, ra, rb] = formats::TypeR{instruction};
 		registers[rdst]           = registers[ra] - registers[rb];
-		break;
-	}
-
-	case Opcode::Not:
-	{
-		const auto [rdst, ra, _r3] = formats::TypeR{instruction};
-		registers[rdst]            = ~registers[ra];
 		break;
 	}
 
@@ -157,13 +158,15 @@ void Core::dispatch()
 	//       Only check for changes when actually accessing memory?
 	registers[RegisterId::Bank] = Word(mmu.set_current_bank(Bank(registers[RegisterId::Bank])));
 
-	instruction_pointer = registers[RegisterId::Ip];
+	// trace(std::cout);
 
 	//++retired_instructions;
 }
 
 void Core::boot()
 {
+	// trace(std::cout);
+
 	for (;;)
 	{
 		current_instruction.reset();
@@ -171,11 +174,18 @@ void Core::boot()
 	}
 }
 
-auto Core::debug_state() const -> std::string
+auto Core::debug_state(DebugTraceStyle style) const -> std::string
 {
+	const bool        multiline = style == DebugTraceStyle::Multiline;
+	const std::string separator = multiline ? "\n" : "\t\t";
+
 	std::string ret;
 
-	ret += "\nRegister dump:\n";
+	if (multiline)
+	{
+		ret += "\nRegister dump:\n";
+	}
+
 	for (std::size_t i = 0; i < RegisterFile::register_count; ++i)
 	{
 		// IIFE
@@ -188,20 +198,20 @@ auto Core::debug_state() const -> std::string
 			}
 		}();
 
-		ret += fmt::format("${:<4}: {:#06x}\n", name, registers[RegisterId(i)]);
+		ret += fmt::format("${:<4}: {:#06x}{}", name, registers[RegisterId(i)], separator);
 	}
-
-	ret += fmt::format("Instruction pointer: {:#06x}\n", instruction_pointer);
 
 	if (current_instruction)
 	{
-		ret += fmt::format("Current instruction: {:#06x}\n", *current_instruction);
+		ret += fmt::format("opcode: {:#06x}{}", *current_instruction, separator);
 		// TODO: disasm
 	}
 	else
 	{
-		ret += fmt::format("No instruction could be read");
+		ret += fmt::format("opcode: failed{}", separator);
 	}
 
 	return ret;
 }
+
+void Core::trace(std::ostream& out) { out << debug_state(DebugTraceStyle::Oneline) << '\n'; }
