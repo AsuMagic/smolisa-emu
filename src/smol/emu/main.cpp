@@ -99,8 +99,7 @@ auto main(int argc, char** argv) -> int
 		}
 	};
 
-	core.instruction_pointer = 0x0000;
-	fmt::print(stderr, "Booting CPU at {:#06x}\n", core.instruction_pointer);
+	fmt::print(stderr, "Booting CPU at {:#06x}\n", core.registers[RegisterId::Ip]);
 
 	try
 	{
@@ -108,7 +107,8 @@ auto main(int argc, char** argv) -> int
 	}
 	catch (const std::exception& e)
 	{
-		const std::string error = fmt::format("Emulator caught fire: {}{}\n", e.what(), core.debug_state());
+		const std::string error
+			= fmt::format("Emulator caught fire: {}{}\n", e.what(), core.debug_state(DebugTraceStyle::Multiline));
 
 #ifdef SMOLISA_FRAMEBUFFER
 		fb.display_simple_string(error, 0, 1);
@@ -118,7 +118,6 @@ auto main(int argc, char** argv) -> int
 
 #ifdef SMOLISA_FRAMEBUFFER
 	while (fb.display())
-	{
-	}
+	{}
 #endif
 }
