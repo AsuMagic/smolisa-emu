@@ -4,6 +4,7 @@
 #include "smol/emu/memory.hpp"
 
 #include <array>
+#include <chrono>
 #include <optional>
 #include <string>
 
@@ -28,7 +29,12 @@ struct Core
 	RegisterFile        registers;
 	std::optional<Word> current_instruction;
 	Mmu                 mmu;
-	// std::size_t         retired_instructions = 0;
+
+	std::size_t executed_ops = 0;
+	std::size_t cycles       = 0;
+
+	using Timer = std::chrono::high_resolution_clock;
+	Timer::time_point start_time;
 
 	std::function<void(Core&)> panic_handler;
 

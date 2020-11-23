@@ -25,6 +25,7 @@ void Core::dispatch()
 		const auto [rdst, imm8] = formats::TypeI{instruction};
 		registers[rdst] &= masks::upper_byte;
 		registers[rdst] |= imm8;
+		cycles += 2;
 		break;
 	}
 
@@ -33,6 +34,7 @@ void Core::dispatch()
 		const auto [rdst, imm8] = formats::TypeI{instruction};
 		registers[rdst] &= masks::lower_byte;
 		registers[rdst] |= imm8 << 8;
+		cycles += 2;
 		break;
 	}
 
@@ -41,6 +43,7 @@ void Core::dispatch()
 		const auto [raddr, rdst, _r3] = formats::TypeR{instruction};
 		registers[rdst] &= masks::upper_byte;
 		registers[rdst] |= mmu.get_byte(registers[raddr]);
+		cycles += 4;
 		break;
 	}
 
@@ -48,6 +51,7 @@ void Core::dispatch()
 	{
 		const auto [raddr, rsrc, _r3] = formats::TypeR{instruction};
 		mmu.set_byte(registers[raddr], registers[rsrc] & masks::lower_byte);
+		cycles += 4;
 		break;
 	}
 
@@ -55,6 +59,7 @@ void Core::dispatch()
 	{
 		const auto [raddr, rdst, _r3] = formats::TypeR{instruction};
 		registers[rdst]               = mmu.get_word(registers[raddr]);
+		cycles += 4;
 		break;
 	}
 
@@ -62,6 +67,7 @@ void Core::dispatch()
 	{
 		const auto [raddr, rsrc, _r3] = formats::TypeR{instruction};
 		mmu.set_word(registers[raddr], registers[rsrc]);
+		cycles += 4;
 		break;
 	}
 
@@ -74,6 +80,7 @@ void Core::dispatch()
 			registers[rdst] = registers[rsrc];
 		}
 
+		cycles += 3;
 		break;
 	}
 
@@ -86,6 +93,7 @@ void Core::dispatch()
 			registers[rdst] = registers[rsrc];
 		}
 
+		cycles += 3;
 		break;
 	}
 
@@ -95,6 +103,7 @@ void Core::dispatch()
 	{
 		const auto [rdst, ra, rb] = formats::TypeR{instruction};
 		registers[rdst]           = registers[ra] + registers[rb]; // TODO: side effects for arithmetic ops?
+		cycles += 3;
 		break;
 	}
 
@@ -102,6 +111,7 @@ void Core::dispatch()
 	{
 		const auto [rdst, ra, rb] = formats::TypeR{instruction};
 		registers[rdst]           = registers[ra] - registers[rb];
+		cycles += 3;
 		break;
 	}
 
@@ -109,6 +119,7 @@ void Core::dispatch()
 	{
 		const auto [rdst, ra, rb] = formats::TypeR{instruction};
 		registers[rdst]           = registers[ra] & registers[rb];
+		cycles += 3;
 		break;
 	}
 
@@ -116,6 +127,7 @@ void Core::dispatch()
 	{
 		const auto [rdst, ra, rb] = formats::TypeR{instruction};
 		registers[rdst]           = registers[ra] | registers[rb];
+		cycles += 3;
 		break;
 	}
 
@@ -123,6 +135,7 @@ void Core::dispatch()
 	{
 		const auto [rdst, ra, rb] = formats::TypeR{instruction};
 		registers[rdst]           = registers[ra] ^ registers[rb];
+		cycles += 3;
 		break;
 	}
 
@@ -130,6 +143,7 @@ void Core::dispatch()
 	{
 		const auto [rdst, ra, rb] = formats::TypeR{instruction};
 		registers[rdst]           = registers[ra] << registers[rb];
+		cycles += 3;
 		break;
 	}
 
@@ -137,13 +151,15 @@ void Core::dispatch()
 	{
 		const auto [rdst, ra, rb] = formats::TypeR{instruction};
 		registers[rdst]           = registers[ra] >> registers[rb];
+		cycles += 3;
 		break;
 	}
 
 	case Opcode::Swb:
 	{
-		const auto [rdst, ra, _r3] = formats::TypeR{instruction};
-		registers[rdst] = (registers[ra] & masks::upper_byte) >> 8 | (registers[ra] & masks::lower_byte) << 8;
+		const auto [rdst, ra, rb] = formats::TypeR{instruction};
+		registers[rdst]           = (registers[ra] & masks::upper_byte) >> 8 | (registers[rb] & masks::lower_byte) << 8;
+		cycles += 3;
 
 		break;
 	}
@@ -160,17 +176,35 @@ void Core::dispatch()
 
 	// trace(std::cout);
 
-	//++retired_instructions;
+	++executed_ops;
 }
 
 void Core::boot()
 {
 	// trace(std::cout);
 
+	start_time = Timer::now();
+
 	for (;;)
 	{
 		current_instruction.reset();
 		dispatch();
+
+		if (executed_ops % 100000 == 0)
+		{
+			const auto time_elapsed = std::chrono::duration<float>(Timer::now() - start_time).count();
+
+			const float avg_cpi = float(cycles) / float(executed_ops);
+			const float avg_mhz = (1.0e-6f * float(cycles)) / time_elapsed;
+
+			fmt::print(
+				"{:.3f}s: {:9} ins, {:9} cycles, avg CPI {:.3f}, avg MHz {:.3f}\n",
+				time_elapsed,
+				executed_ops,
+				cycles,
+				avg_cpi,
+				avg_mhz);
+		}
 	}
 }
 
