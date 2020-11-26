@@ -14,6 +14,8 @@ The architecture performs memory accesses in a little-endian fashion. Opcodes sh
 Bank swapping of the last 48KiB is implemented through the `$bank` register, which extends the theoretical maximum available memory to over 3GiB.  
 However, there is no guarantee as to how many banks are provided on a specific implementation, if any.
 
+16-bit memory accesses must be aligned to 16-bit, or undefined behavior will occur. As such, any address used in `lw` or `sw` must be aligned. Opcodes must also be aligned.
+
 ## Registers
 
 All registers are initialized to zero on reset, including the instruction pointer. 
