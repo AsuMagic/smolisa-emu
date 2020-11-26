@@ -2,10 +2,11 @@
 
 Assembler, emulator, documentation and demos for the smolisa architecture.
 
+NOTE: at this time, the README is outdated - the assembler has changed to a python implementation.
+
 ## Quick start
 
 - [Instruction set documentation](doc/cpu.md)
-- [Assembler documentation](doc/asm.md)
 
 ### Compiling (*nix)
 
