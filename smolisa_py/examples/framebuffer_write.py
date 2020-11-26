@@ -31,4 +31,5 @@ asm.at(0x0000, [
     OR(RIP, RG0, RG0)
 ])
 
-asm.to_rom()
+if __name__ == "__main__":
+    asm.to_rom()

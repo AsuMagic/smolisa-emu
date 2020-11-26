@@ -117,4 +117,5 @@ with open("./assets/badapple.bin", "rb") as file:
         bytes(file.read())
     ])
 
-asm.to_rom(2048 * 1024)
+if __name__ == "__main__":
+    asm.to_rom(2048 * 1024)
