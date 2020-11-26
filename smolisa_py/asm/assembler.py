@@ -16,8 +16,8 @@ class Asm:
         assert name not in self.labels
         self.labels[name] = address
     
-    def to_rom(self, rom_size=65536):
-        rom = bytearray([0x00 for i in range(rom_size)])
+    def as_bytes(self, size):
+        rom = bytearray([0x00 for i in range(size)])
 
         # TODO: detect sequence overlaps
 
@@ -43,7 +43,17 @@ class Asm:
                 
                 offset += self._token_length(token)
         
-        sys.stdout.buffer.write(rom)
+        return rom
+    
+    def as_int16_list(self, size_bytes):
+        rom_bytes = self.as_bytes(size_bytes)
+        return [
+            rom_bytes[i * 2] | (rom_bytes[(i * 2) + 1] << 8)
+            for i in range(size_bytes // 2)
+        ]
+
+    def to_rom(self, rom_size=65536):
+        sys.stdout.buffer.write(self.as_bytes(rom_size))
     
     def _resolve_reg(self, operand):
         if isinstance(operand, Register):
