@@ -26,7 +26,7 @@ class ALU(Elaboratable):
             with m.Case(AluOp.XOR):
                 m.d.comb += self.out.eq(self.a ^ self.b)
             with m.Case(AluOp.SHL):
-                m.d.comb += self.out.eq(self.a << self.b)
+                m.d.comb += self.out.eq(self.a << self.b[0:4])
             with m.Case(AluOp.SHR):
                 m.d.comb += self.out.eq(self.a >> self.b)
             with m.Case(AluOp.SWB):

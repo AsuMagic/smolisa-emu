@@ -1,6 +1,6 @@
 #pragma once
 
-#include "smol/common/types.hpp"
+#include <smol/types.hpp>
 
 #include <functional>
 #include <vector>

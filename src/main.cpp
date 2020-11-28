@@ -1,6 +1,6 @@
-#include "smol/common/ioutil.hpp"
-#include "smol/emu/core.hpp"
-#include "smol/emu/framebuffer/framebuffer.hpp"
+#include <smol/core.hpp>
+#include <smol/framebuffer/framebuffer.hpp>
+#include <smol/ioutil.hpp>
 
 #include <algorithm>
 #include <fmt/core.h>
@@ -107,8 +107,7 @@ auto main(int argc, char** argv) -> int
 	}
 	catch (const std::exception& e)
 	{
-		const std::string error
-			= fmt::format("Emulator caught fire: {}{}\n", e.what(), core.debug_state(DebugTraceStyle::Multiline));
+		const std::string error = fmt::format("Emulator caught fire: {}{}\n", e.what(), core.debug_state_multiline());
 
 #ifdef SMOLISA_FRAMEBUFFER
 		fb.display_simple_string(error, 0, 1);

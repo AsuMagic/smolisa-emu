@@ -1,4 +1,4 @@
-#include "smol/emu/memory.hpp"
+#include <smol/memory.hpp>
 
 #include <cstddef>
 #include <fmt/core.h>
@@ -79,7 +79,15 @@ void Mmu::set_byte(Addr addr, Byte data)
 	ram[ram_offset(addr)] = data;
 }
 
-auto Mmu::get_word(Addr addr) const -> Word { return (get_byte(addr + 0) << 0) | (get_byte(addr + 1) << 8); }
+auto Mmu::get_word(Addr addr) const -> Word
+{
+	if ((addr & 0b1) != 0)
+	{
+		throw std::runtime_error{"Any 16-bit memory access must be 16-bit aligned"};
+	}
+
+	return (get_byte(addr + 0) << 0) | (get_byte(addr + 1) << 8);
+}
 
 void Mmu::set_word(Addr addr, Word data)
 {

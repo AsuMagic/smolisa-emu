@@ -1,6 +1,6 @@
-#include "smol/emu/framebuffer/framebuffer.hpp"
+#include <smol/framebuffer/framebuffer.hpp>
 
-#include "smol/common/masks.hpp"
+#include <smol/masks.hpp>
 
 #include <fmt/core.h>
 
@@ -8,9 +8,10 @@ auto FrameBuffer::get_char(std::size_t x, std::size_t y) const -> FrameBuffer::C
 {
 	const std::size_t base_address = (x + y * width) * sizeof_fb_char;
 
-	return {.code                = m_character_data.at(base_address),
-			.palette_front_entry = char((m_character_data.at(base_address + 1) & masks::lower_nibble) >> 0),
-			.palette_back_entry  = char((m_character_data.at(base_address + 1) & masks::upper_nibble) >> 4)};
+	return {
+		.code                = m_character_data.at(base_address),
+		.palette_front_entry = char((m_character_data.at(base_address + 1) & masks::lower_nibble) >> 0),
+		.palette_back_entry  = char((m_character_data.at(base_address + 1) & masks::upper_nibble) >> 4)};
 }
 
 void FrameBuffer::set_palette_entry(std::size_t index, FrameBuffer::PaletteEntry entry)
@@ -26,9 +27,10 @@ auto FrameBuffer::get_palette_entry(std::size_t index) const -> FrameBuffer::Pal
 {
 	const std::size_t base_address = index * sizeof_palette_entry;
 
-	return {.r = Byte(m_palette_data[base_address]),
-			.g = Byte(m_palette_data[base_address + 1]),
-			.b = Byte(m_palette_data[base_address + 2])};
+	return {
+		.r = Byte(m_palette_data[base_address]),
+		.g = Byte(m_palette_data[base_address + 1]),
+		.b = Byte(m_palette_data[base_address + 2])};
 }
 
 FrameBuffer::FrameBuffer(FrameBufferConfig config) :

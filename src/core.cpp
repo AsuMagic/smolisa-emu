@@ -1,18 +1,13 @@
-#include "smol/emu/core.hpp"
+#include <smol/core.hpp>
 
-#include "smol/common/instruction.hpp"
-#include "smol/common/opcodes.hpp"
+#include <smol/instruction.hpp>
+#include <smol/opcodes.hpp>
 
 #include <fmt/core.h>
 #include <iostream>
 
 void Core::dispatch()
 {
-	if ((registers[RegisterId::Ip] & 0b1) != 0)
-	{
-		throw std::runtime_error{"Invalid alignment: Instruction pointer should be aligned to 2 bytes"};
-	}
-
 	const Word instruction = mmu.get_word(registers[RegisterId::Ip]);
 	current_instruction    = instruction;
 
@@ -174,14 +169,15 @@ void Core::dispatch()
 	//       Only check for changes when actually accessing memory?
 	registers[RegisterId::Bank] = Word(mmu.set_current_bank(Bank(registers[RegisterId::Bank])));
 
-	// trace(std::cout);
+	std::cout << debug_state() << '\n';
 
 	++executed_ops;
 }
 
 void Core::boot()
 {
-	// trace(std::cout);
+	std::cout << debug_state_preamble() << '\n';
+	std::cout << debug_state() << '\n';
 
 	start_time = Timer::now();
 
@@ -208,44 +204,58 @@ void Core::boot()
 	}
 }
 
-auto Core::debug_state(DebugTraceStyle style) const -> std::string
+auto Core::debug_state_multiline() const -> std::string
 {
-	const bool        multiline = style == DebugTraceStyle::Multiline;
-	const std::string separator = multiline ? "\n" : "\t\t";
-
-	std::string ret;
-
-	if (multiline)
-	{
-		ret += "\nRegister dump:\n";
-	}
+	std::string ret = "\nRegister dump:\n";
 
 	for (std::size_t i = 0; i < RegisterFile::register_count; ++i)
 	{
-		// IIFE
-		const auto name = [i]() -> std::string {
-			switch (i)
-			{
-			case 14: return "ip";
-			case 15: return "bank";
-			default: return fmt::format("g{}", i);
-			}
-		}();
-
-		ret += fmt::format("${:<4}: {:#06x}{}", name, registers[RegisterId(i)], separator);
+		ret += fmt::format("${:<4}: {:#06x}\n", register_name(RegisterId(i)), registers[RegisterId(i)]);
 	}
 
 	if (current_instruction)
 	{
-		ret += fmt::format("opcode: {:#06x}{}", *current_instruction, separator);
-		// TODO: disasm
+		ret += fmt::format("opcode: {:#06x}\n", *current_instruction);
 	}
 	else
 	{
-		ret += fmt::format("opcode: failed{}", separator);
+		ret += fmt::format("opcode: failed\n");
 	}
 
 	return ret;
 }
 
-void Core::trace(std::ostream& out) { out << debug_state(DebugTraceStyle::Oneline) << '\n'; }
+auto Core::debug_state() const -> std::string
+{
+	std::string ret;
+
+	for (std::size_t i = 0; i < RegisterFile::register_count; ++i)
+	{
+		ret += fmt::format("{:04x} ", registers[RegisterId(i)]);
+	}
+
+	if (current_instruction)
+	{
+		ret += fmt::format("{:04x}", *current_instruction);
+	}
+	else
+	{
+		ret += "0000";
+	}
+
+	return ret;
+}
+
+std::string Core::debug_state_preamble() const
+{
+	std::string ret;
+
+	for (std::size_t i = 0; i < RegisterFile::register_count; ++i)
+	{
+		ret += fmt::format("{:<5}", register_name(RegisterId(i)));
+	}
+
+	ret += "(op) ";
+
+	return ret;
+}

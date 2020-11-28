@@ -2,7 +2,7 @@
 
 #ifdef SMOLISA_FRAMEBUFFER
 
-#	include "smol/common/types.hpp"
+#	include <smol/types.hpp>
 
 #	include <SFML/Graphics.hpp>
 #	include <cstddef>

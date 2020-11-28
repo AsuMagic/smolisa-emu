@@ -1,7 +1,7 @@
 #pragma once
 
-#include "smol/common/registers.hpp"
-#include "smol/emu/memory.hpp"
+#include <smol/memory.hpp>
+#include <smol/registers.hpp>
 
 #include <array>
 #include <chrono>
@@ -16,12 +16,6 @@ struct RegisterFile
 
 	auto operator[](RegisterId id) -> Word& { return data.at(std::size_t(id)); }
 	auto operator[](RegisterId id) const -> const Word& { return data.at(std::size_t(id)); }
-};
-
-enum class DebugTraceStyle
-{
-	Multiline,
-	Oneline
 };
 
 struct Core
@@ -41,6 +35,7 @@ struct Core
 	void dispatch();
 	void boot();
 
-	[[nodiscard]] auto debug_state(DebugTraceStyle style) const -> std::string;
-	void               trace(std::ostream& out);
+	[[nodiscard]] auto debug_state_multiline() const -> std::string;
+	[[nodiscard]] auto debug_state() const -> std::string;
+	[[nodiscard]] auto debug_state_preamble() const -> std::string;
 };

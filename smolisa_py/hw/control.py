@@ -3,12 +3,10 @@ from nmigen.sim import Simulator
 from enum import Enum
 
 RegAddrSrc = Enum('RegAddrSrc', 'R1 R2 R3 REF_IP', start=0)
-RegDataSrc = Enum('RegDataSrc', 'IMM8_LOW IMM8_HIGH MEM8 MEM16 ALU', start=0)
+RegDataSrc = Enum('RegDataSrc', 'IMM8_LOW IMM8_HIGH MEM8 MEM16 ALU REG2', start=0)
 
 MemAddrSrc = Enum('MemAddrSrc', 'IP REG1', start=0)
 MemDataSrc = Enum('MemDataSrc', 'IP REG2', start=0)
-
-IpSrc = Enum('IpSrc', 'ALU REG2', start=0)
 
 AluOp = Enum('AluOp', 'ADD SUB AND OR XOR SHL SHR SWB', start=0)
 AluDataSrc = Enum('AluDataSrc', 'IP REG1 REG2 TWO', start=0)
@@ -44,6 +42,8 @@ class Control(Elaboratable):
         self.opcode = Signal(16)
         self.mem_data = Signal(16)
         self.opcode_reg = Signal(16)
+
+        self.new_op = Signal(1)
 
         self.alu_op = Signal(AluOp)
     
@@ -135,13 +135,16 @@ class Control(Elaboratable):
     
     def exec2_lrz(self, m):
         m.d.comb += [
-            self.bus.alu_op.eq(AluOp.SUB)
+            self.bus.alu_a_src.eq(AluDataSrc.REG1),
+            self.bus.alu_b_src.eq(AluDataSrc.REG1),
+            self.bus.alu_op.eq(AluOp.OR)
         ]
 
-        with m.If(self.bus.alu_flag_zero):
+        with m.If(self.bus.alu_flag_zero == 1):
             m.d.comb += [
-                self.bus.ip_we.eq(1),
-                self.bus.ip_src.eq(IpSrc.REG2)
+                self.bus.reg_waddr_src.eq(RegAddrSrc.REF_IP),
+                self.bus.reg_we.eq(1),
+                self.bus.reg_data_src.eq(RegDataSrc.REG2)
             ]
         
         m.next = "fetch"
@@ -155,13 +158,16 @@ class Control(Elaboratable):
     
     def exec2_lrnz(self, m):
         m.d.comb += [
-            self.bus.alu_op.eq(AluOp.SUB)
+            self.bus.alu_a_src.eq(AluDataSrc.REG1),
+            self.bus.alu_b_src.eq(AluDataSrc.REG1),
+            self.bus.alu_op.eq(AluOp.OR)
         ]
 
-        with m.If(not self.bus.alu_flag_zero):
+        with m.If(self.bus.alu_flag_zero == 0):
             m.d.comb += [
-                self.bus.ip_we.eq(1),
-                self.bus.ip_src.eq(IpSrc.REG2)
+                self.bus.reg_waddr_src.eq(RegAddrSrc.REF_IP),
+                self.bus.reg_we.eq(1),
+                self.bus.reg_data_src.eq(RegDataSrc.REG2)
             ]
         
         m.next = "fetch"
@@ -196,6 +202,8 @@ class Control(Elaboratable):
         m.d.comb += self.opcode.eq(self.opcode_reg)
 
         with m.FSM() as fsm:
+            m.d.comb += self.new_op.eq(fsm.ongoing("fetch"))
+
             with m.State("fetch"):
                 m.d.comb += [
                     self.bus.mem_addr_src.eq(MemAddrSrc.IP),
@@ -261,10 +269,10 @@ class Control(Elaboratable):
                 self.exec2_alu(m)
             
             with m.State("exec2_lrz"):
-                self.exec2_alu(m)
+                self.exec2_lrz(m)
 
             with m.State("exec2_lrnz"):
-                self.exec2_alu(m)
+                self.exec2_lrnz(m)
                 
 
         return m

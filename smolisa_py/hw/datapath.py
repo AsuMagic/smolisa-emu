@@ -1,21 +1,21 @@
 from nmigen import *
-from nmigen.sim import Simulator
 from control import *
 from ram import *
 from regfile import *
 from alu import *
+from main import *
 
-from smolisa_py.examples.loop import asm as loop_asm
+from smolisa_py.examples.fib import asm as fib_asm
 
 # TODO: this might contain more logic than expected from a data path
 class DataPath(Elaboratable):
     def __init__(self, init_rom):
-        self.bus = Record(ControlBus)
-
         self.ctrl = Control()
         self.ram = RAM(1024, init_rom)
         self.regs = RegFile()
         self.alu = ALU()
+
+        self.bus = self.ctrl.bus
 
     def resolve_reg_addr(self, m, reg_addr, reg_addr_src):
         with m.Switch(reg_addr_src):
@@ -51,7 +51,6 @@ class DataPath(Elaboratable):
 
         # control datapath
         m.d.comb += [
-            self.bus.eq(self.ctrl.bus),
             self.ctrl.mem_data.eq(self.ram.rdata)
         ]
 
@@ -84,7 +83,11 @@ class DataPath(Elaboratable):
                         self.regs.wdata.eq(self.alu.out),
                         self.regs.wmask.eq(0b11)
                     ]
-                    pass
+                with m.Case(RegDataSrc.REG2):
+                    m.d.comb += [
+                        self.regs.wdata.eq(self.regs.rdata2),
+                        self.regs.wmask.eq(0b11)
+                    ]
 
         self.resolve_reg_addr(m, self.regs.raddr1, self.bus.reg_addr1_src)
         self.resolve_reg_addr(m, self.regs.raddr2, self.bus.reg_addr2_src)
@@ -121,13 +124,30 @@ class DataPath(Elaboratable):
         return m
     
     def testbench(self):
-        for _ in range(100):
+        def reg_name(id):
+            if id == 0xE:
+                return "ip"
+            if id == 0xF:
+                return "bank"
+            if id == 0x10: # not a reg, just for traces
+                return "(op)"
+            return "g" + str(id)
+
+        print(''.join(f"{reg_name(i):<5}" for i in range(17)))
+
+        while True:
+            if (yield self.ctrl.new_op):
+                trace = ""
+
+                for i in range(16):
+                    trace += f"{(yield self.regs.regs[i]):04x} "
+                
+                trace += "{:04x}".format((yield self.ctrl.opcode))
+                print(trace)
+
             yield
 
-dut = DataPath(loop_asm.as_int16_list(1024))
 
-sim = Simulator(dut)
-sim.add_clock(1e-6)
-sim.add_sync_process(dut.testbench)
-with sim.write_vcd("datapath.vcd"):
-    sim.run()
+if __name__ == "__main__":
+    design = DataPath(fib_asm.as_int16_list(1024))
+    main(design, processes=[design.testbench], ports=[design.regs.rip])
