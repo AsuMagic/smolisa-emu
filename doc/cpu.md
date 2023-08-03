@@ -151,9 +151,9 @@ TODO:
 |       |            |                               | _**Branching**_                                       |                                                        |
 | R4    | `10101000` | `j(addr:R4)`                  | **J**ump unconditionally                              | `RIP <- addr`                                          |
 | R4    | `10101001` | `jc(addr:R4)`                 | **J**ump **c**onditionally                            | `if T { RIP <- addr }`                                 |
-| R4    | `00101010` | `jcall(addr:R4)`              | **J**ump: **Call** subroutine                         | `PS <- PS - 4; mem32(PS) <- RIP; RIP <- addr`          |
-| -     | `00101011` | `jret()`                      | **J**ump: **Ret**urn from subroutine                  | `RIP <- mem32(PS); PS <- PS + 4`                       |
-|       | `001011--` | Reserved                      | Reserved                                              |                                                        |
+| R4    | `10101010` | `jcall(addr:R4)`              | **J**ump: **Call** subroutine                         | `PS <- PS - 4; mem32(PS) <- RIP; RIP <- addr`          |
+| -     | `10101011` | `jret()`                      | **J**ump: **Ret**urn from subroutine                  | `RIP <- mem32(PS); PS <- PS + 4`                       |
+|       | `101011--` | Reserved                      | Reserved                                              |                                                        |
 | I12   | `1011----` | `jc_i(ipoff:Id12)`            | **J**ump **c**onditionally with IP-relative **i**mm.  | `if T { RIP <- RIP + 4 + s32(ipoff) }`                 |
 |       |           |                          | _**Binary operators**_                         |                                                        |
 | R4R5  | `1100000` | `add $dst $b`            | Arithmetic **add**                             | `dst <- dst + b`                                       |
