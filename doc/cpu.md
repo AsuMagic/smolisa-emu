@@ -33,46 +33,57 @@ Out-of-range memory accesses are undefined behavior.
 
 ## Registers
 
-All general-purpose registers are initialized to zero on reset.
+Whether *all* registers are 0-initialized on reset is implementation-defined.
+Certain registers are *always* 0-initialized on reset: `rip`.
 
 The instruction pointer initializes in an implementation-defined manner (typically `0x0`).
 TODO: this should not really be the case, memory mapping will make this make more sense
 
-| Mnemonic   | Encoding | Mode | Meaning                                       |
-|------------|----------|------|-----------------------------------------------|
-|            |          |      | **Regular registers**                         |
-| `R0`       | `0x0`    | RW   | General purpose register                      |
-| ...        |          |      |                                               |
-| `R11`      | `0xB`    | RW   |                                               |
-|            |          |      | **Pool address registers**                    |
-| `RPL`      | `0xC`    | RW   | Literal pool start address                    |
-| `RP0`      | `0xD`    | RW   | User pool start address                       |
-| Reserved   | `0xE`    | noop | TODO |
-| Reserved   | `0xF`    | noop | TODO |
+| Mnemonic   | Encoding | Use or ABI meaning                            | Saved    |
+|------------|----------|-----------------------------------------------|----------|
+|            |          | **General purpose registers**                 |          |
+| `r0`       | `0x0`    | Fast target for certain encodings             | Caller   |
+| `r1`       | `0x1`    | ABI: Arg #0 or vararg count, return register  | Caller   |
+| `r2`       | `0x2`    | ABI: Arg #1                                   | Caller   |
+| `r3`       | `0x3`    | ABI: Arg #2                                   | Caller   |
+| `r4`       | `0x4`    | ABI: Arg #3                                   | Caller   |
+| `r5`       | `0x5`    | ABI: Arg #4                                   | Caller   |
+| `r6`       | `0x6`    | ABI: Arg #5                                   | Caller   |
+| `r7`       | `0x7`    |                                               | Callee   |
+| `r8`       | `0x8`    |                                               | Callee   |
+| `r9`       | `0x9`    |                                               | Callee   |
+| `r10`      | `0xA`    |                                               | Callee   |
+| `r11`      | `0xB`    |                                               | Callee   |
+| `r12`      | `0xC`    |                                               | Callee   |
+|            |          | **Specific-purpose registers**                |          |
+| `rpl`      | `0xD`    | Literal pool start address                    | Callee   |
+| `rpg`      | `0xE`    | Global pool start address                     | Callee   | 
+| `rps`      | `0xF`    | Stack pointer                                 | Callee   |
 
 Certain special registers cannot be addressed directly, but may be manipulated
 and used by certain instructions.
 
-| Name       | Width | Meaning      |
-|------------|-------|--------------|
-| `T`        | 1 bit | **T**est bit | 
+| Name       | Width  | Meaning             |
+|------------|--------|---------------------|
+| `T`        | 1 bit  | **T**est bit        |
+| `rip`      | 32-bit | Instruction pointer |
 
 #### Stack
 
 The standard way to use the stack is to initialize it to the *highest* address. The stack grows *downwards* in the address space.
 
-For instance, `PUSH(RG5)` is roughly equivalent to:
+For instance, `push(r5)` is roughly equivalent to:
 
 ```python
-    add_i(RPS, -4),
-    sq(RPS, R5)
+    addi(rps, -4),
+    s32(rps, r5)
 ```
 
-... and `POP(R5)` is roughly equivalent to:
+... and `pop(r5)` is roughly equivalent to:
 
 ```python
-    lq(RPS, R5),
-    add_i(RPS, 4)
+    lu32(rps, r5),
+    add_i(rps, 4)
 ```
 
 #### The stack and interrupts
@@ -87,7 +98,7 @@ stack pointer should be expected to be mutated at any time.
 
 No delay slots are used for branching instructions.  
 Thus, the instruction executed immediately after a successful branch will be the
-targeted PC.
+targeted IP.
 
 Conditional branches and loads read the special `T` bit register.
 The `T` bit is manipulated by certain arithmetic and test instructions.
@@ -96,77 +107,72 @@ The `T` bit is manipulated by certain arithmetic and test instructions.
 
 TODO:
 
-- sext8
-- sext16
-- abs
-- neg
-- branch thru a flag or have separate ops?
-- have conditional loads or not?
-- swap8
-- swap16
+- sel bytes (kind of like PEXT but at byte level) - would allow doing zext
 - check more of what SH might have interesting
 - check more of what RV might have interesting
 - check more of what Thumb might have interesting
-- reserve some insns still
-- rename PC to IP
 
 |Format | Instr[0:7] | Mnemonic                      | Description                                           | Pseudocode                                             |
 |-------|------------|-------------------------------|-------------------------------------------------------|--------------------------------------------------------|
 |       |            |                               | _**Loads**_                                           |                                                        |
-| R4R4  | `00000000` | `lu8(addr:R4, dst:R4)`        | **L**oad **u8** from memory (zext)                    | `dst <- u32(mem8(addr))`                               |
-| R4R4  | `00000001` | `lu16(addr:R4, dst:R4)`       | **L**oad **u16** from memory (zext)                   | `dst <- u32(mem16(addr))`                              |
-| R4R4  | `00000010` | `lu32(addr:R4, dst:R4)`       | **L**oad **u32** from memory                          | `dst <- mem32(addr)`                                   |
-| R4    | `00000011` | `pop(src:R4)`                 | **Pop** from stack (PS)                               | `dst <- mem32(PS); PS <- PS + 4`                       |
-| R4I6  | `000001--` | `lou8_r0(addr:R4, imm:I6)`    | **L**oad **o**ffset **u8** from memory to **R0**      | `dst <- u32(mem8(addr + u32(imm)))`                    |
-| R4I6  | `000010--` | `lou16_r0(addr:R4, imm:I6)`   | **L**oad **o**ffset **u16** from memory to **R0**     | `dst <- u32(mem16(addr + u32(imm) << 1))`              |
-| R4I6  | `000011--` | `lou32_r0(addr:R4, imm:I6)`   | **L**oad **o**ffset **u32** from memory to **R0**     | `dst <- mem32(addr + u32(imm) << 2))`                  |
-| R4I8  | `0001----` | `lsi(imm:I8, dst:R4)`         | **L**oad from **s**8 **i**mmediate                    | `dst <- s32(imm)`                                      |
-| I12   | `0010----` | `lsi_r0(imm:I12)`             | **L**oad from **s**12 **i**mmediate to **R0**         | `R0 <- s32(imm)`                                       |
+| R4W4  | `00000000` | `l8(addr:R4, dst:R4)`         | **L**oad u**8** from memory (zext)                    | `dst <- u32(mem8(addr))`                               |
+| R4W4  | `00000001` | `l16(addr:R4, dst:R4)`        | **L**oad u**16** from memory (zext)                   | `dst <- u32(mem16(addr))`                              |
+| R4W4  | `00000010` | `l32(addr:R4, dst:R4)`        | **L**oad u**32** from memory                          | `dst <- mem32(addr)`                                   |
+| R4-4  | `00000011` | `pop(src:R4)`                 | **Pop** from stack (rps)                              | `dst <- mem32(rps); rps <- rps + 4`                    |
+| R2I8  | `000001--` | `lo8_r0(base:R2, imm:I8)`     | **L**oad **o**ffset u**8** from memory to **R0**      | `r0 <- u32(mem8(base + u32(imm)))`                     |
+| R2Id8 | `000010--` | `lo16_r0(base:R2, imm:Id8)`   | **L**oad **o**ffset u**16** from memory to **R0**     | `r0 <- u32(mem16(base + u32(imm) << 1))`               |
+| R2Iq8 | `000011--` | `lo32_r0(base:R2, imm:Iq8)`   | **L**oad **o**ffset u**32** from memory to **R0**     | `r0 <- mem32(base + u32(imm) << 2))`                   |
+| W4I8  | `0001----` | `lsi(imm:I8, dst:R4)`         | **L**oad from **s**8 **i**mmediate                    | `dst <- s32(imm)`                                      |
+| Id12  | `0010----` | `liprel_r0(imm:Id12)`         | **L**oad **ip-rel**ative ±8K to **r0**                | `r0 <- rip + 2 + s32(dst << 1)`                        |
 |       |            |                               | _**Stores**_                                          |                                                        |
-| R4R4  | `00110000` | `su8(addr:R4, src:R4)`        | **S**tore **u8** to memory                            | `mem8(addr) <- src[:7]`                                |
-| R4R4  | `00110001` | `su16(addr:R4, src:R4)`       | **S**tore **u16** to memory                           | `mem16(addr) <- src[:15]`                              |
-| R4R4  | `00110010` | `su32(addr:R4, src:R4)`       | **S**tore **u32** to memory                           | `mem32(addr) <- src`                                   |
-| R4    | `00110011` | `push(src:R4)`                | **Push** to PS                                        | `PS <- PS - 4; mem32(PS) <- src`                       |
-| R4I6  | `001101--` | `sou8_r0(addr:R4, src:R4)`    | **S**tore **o**ffset **u8** to memory from **R0**     | `mem8(addr + u32(imm)) <- src[:7]`                     |
-| R4I6  | `001110--` | `sou16_r0(addr:R4, src:R4)`   | **S**tore **o**ffset **u16** to memory from **R0**    | `mem16(addr + u32(imm) << 1)) <- src[:15]`             |
-| R4I6  | `001111--` | `sou32_r0(addr:R4, src:R4)`   | **S**tore **o**ffset **u32** to memory from **R0**    | `mem32(addr + u32(imm) << 2)) <- src`                  |
+| R4R4  | `00110000` | `s8(addr:R4, src:R4)`         | **S**tore u**8** to memory                            | `mem8(addr) <- src[:7]`                                |
+| R4R4  | `00110001` | `s16(addr:R4, src:R4)`        | **S**tore u**16** to memory                           | `mem16(addr) <- src[:15]`                              |
+| R4R4  | `00110010` | `s32(addr:R4, src:R4)`        | **S**tore u**32** to memory                           | `mem32(addr) <- src`                                   |
+| R4-4  | `00110011` | `push(src:R4)`                | **Push** to rps                                       | `rps <- rps - 4; mem32(rps) <- src`                    |
+| R2I8  | `001101--` | `so8_r0(base:R2, imm:I8)`     | **S**tore **o**ffset u**8** to memory from **R0**     | `mem8(addr + u32(imm)) <- src[:7]`                     |
+| R2Id8 | `001110--` | `so16_r0(base:R2, imm:Id8)`   | **S**tore **o**ffset u**16** to memory from **R0**    | `mem16(addr + u32(imm) << 1)) <- src[:15]`             |
+| R2Iq8 | `001111--` | `so32_r0(base:R2, imm:Iq8)`   | **S**tore **o**ffset u**32** to memory from **R0**    | `mem32(addr + u32(imm) << 2)) <- src`                  |
 |       |            |                               | _**Pool loads**_                                      |                                                        |
-| R4I8  | `0100----` | `pl_lu32(dst:R4, imm:Iq8)`    | **PL** **L**oad **u32** from memory ±1K               | `dst <- mem32(RP0 + (u32(imm) << 2))`                  |
-| R4I8  | `0101----` | `p0_lu32(dst:R4, imm:Iq8)`    | **P0** **L**oad **u32** from memory ±1K               | `dst <- mem32(RPG + (u32(imm) << 2))`                  |
-| I12   | `0110----` | `p0_lu32_r0(imm:Iq12)`        | **P0** **L**oad **u32** from memory ±16K to **R0**    | `R0 <- mem32(RPG + (u32(imm) << 2))`                   |
+| W4I8  | `0100----` | `pl_l32(dst:R4, imm:Iq8)`     | **rpl** **L**oad u**32** from memory ±1K              | `dst <- mem32(rpg + (u32(imm) << 2))`                  |
+| I12   | `0101----` | `pg_l32_r0(imm:Iq12)`         | **rpg** **L**oad u**32** from memory ±16K to **R0**   | `R0 <- mem32(rpg + (u32(imm) << 2))`                   |
 |       |            |                               | _**Pool stores**_                                     |                                                        |
-| R4I8  | `0111----` | `p0_su32(dst:R4, imm:Iq8)`    | **P0** **S**tore **u32** from memory ±1K              | `mem32(RP0 + (imm << 2)) <- src`                       |
-| I12   | `1000----` | `p0_su32_r0(imm:Iq12)`        | **P0** **S**tore **u32** from memory ±16K from **R0** | `mem32(RP0 + (imm << 2)) <- R0`                        |
+| I12   | `0110----` | `p0_su32_r0(imm:Iq12)`        | **rpg** **S**tore **u32** to memory ±16K from **R0**  | `mem32(rpg + (imm << 2)) <- r0`                        |
 |       |            |                               | _**Pool IP-relative init**_                           |                                                        |
-| I12   | `1001----` | `pl_pcrel(imm:Iq12)`          | **PL** **Init**ialize to IP-relative immediate        | `RPL <- IP + (imm << 2)`                               |
-|       |            |                               | _**Tests**_                                           |                                                        |
-| R4R4  | `10100000` | `tltu(a:R4, b:R4)`            | **T**est if **l**ower **t**han (**u**nsigned)         | `T <- (a < b)`                                         |
-| R4R4  | `10100001` | `tlts(a:R4, b:R4)`            | **T**est if **l**ower **t**han (**s**igned)           | `T <- (s32(a) < s32(b))`                               |
-| R4R4  | `10100010` | `tgeu(a:R4, b:R4)`            | **T**est if **g**reater or **e**qual (**u**nsigned)   | `T <- (a >= b)`                                        |
-| R4R4  | `10100011` | `tges(a:R4, b:R4)`            | **T**est if **g**reater or **e**qual (**s**igned)     | `T <- (s32(a) >= s32(b))`                              |
-| R4R4  | `10100100` | `te(a:R4, b:R4)`              | **T**est if **e**qual to                              | `T <- (a == b)`                                        |
-| R4R4  | `10100101` | `tne(a:R4, b:R4)`             | **T**est if **n**ot **e**qual to                      | `T <- (a != b)`                                        |
-| R4I4  | `10100110` | `te_i(a:R4, b:I4)`            | **T**est if **e**qual to **i**mmediate                | `T <- (a == b)`                                        |
-| R4I4  | `10100111` | `tne_i(a:R4, b:I4)`           | **T**est if **n**ot **e**qual to **i**mmediate        | `T <- (a != b)`                                        |
-|       |            |                               | _**Branching**_                                       |                                                        |
-| R4    | `10101000` | `j(addr:R4)`                  | **J**ump unconditionally                              | `RIP <- addr`                                          |
-| R4    | `10101001` | `jc(addr:R4)`                 | **J**ump **c**onditionally                            | `if T { RIP <- addr }`                                 |
-| R4    | `10101010` | `jcall(addr:R4)`              | **J**ump: **Call** subroutine                         | `PS <- PS - 4; mem32(PS) <- RIP; RIP <- addr`          |
-| -     | `10101011` | `jret()`                      | **J**ump: **Ret**urn from subroutine                  | `RIP <- mem32(PS); PS <- PS + 4`                       |
-|       | `101011--` | Reserved                      | Reserved                                              |                                                        |
-| I12   | `1011----` | `jc_i(ipoff:Id12)`            | **J**ump **c**onditionally with IP-relative **i**mm.  | `if T { RIP <- RIP + 4 + s32(ipoff) }`                 |
-|       |           |                          | _**Binary operators**_                         |                                                        |
-| R4R5  | `1100000` | `add $dst $b`            | Arithmetic **add**                             | `dst <- dst + b`                                       |
-| R4R5  | `1100001` | `sub $dst $b`            | Arithmetic **sub**tract                        | `dst <- dst - b`                                       |
+| I12   | `0111----` | `liprel_pl(imm:Io12)`         | **L**oad **ip-rel**ative ±32K to **rpl**              | `rpl <- rip + (imm << 3)`                              |
+|       |            |                               | _**Tests and `T`-bit manipulation**_                  |                                                        |
+| R4R4  | `10000000` | `tltu(a:R4, b:R4)`            | **T**est if **l**ower **t**han (**u**nsigned)         | `T <- (a < b)`                                         |
+| R4R4  | `10000001` | `tlts(a:R4, b:R4)`            | **T**est if **l**ower **t**han (**s**igned)           | `T <- (s32(a) < s32(b))`                               |
+| R4R4  | `10000010` | `tgeu(a:R4, b:R4)`            | **T**est if **g**reater or **e**qual (**u**nsigned)   | `T <- (a >= b)`                                        |
+| R4R4  | `10000011` | `tges(a:R4, b:R4)`            | **T**est if **g**reater or **e**qual (**s**igned)     | `T <- (s32(a) >= s32(b))`                              |
+| R4R4  | `10000100` | `te(a:R4, b:R4)`              | **T**est if **e**qual to                              | `T <- (a == b)`                                        |
+| R4R4  | `10000101` | `tne(a:R4, b:R4)`             | **T**est if **n**ot **e**qual to                      | `T <- (a != b)`                                        |
+| R4I4  | `10000110` | `tltsi(a:R4, b:I4)`           | **T**est if **l**ower **t**han **s**igned **i**mm.    | `T <- (s32(a) < s32(b))`                               |
+| R4I4  | `10000111` | `tgesi(a:R4, b:I4)`           | **T**est if **g**reater or **e**qual (**s**igned)     | `T <- (s32(a) >= s32(b))`                              |
+| R4I4  | `10001000` | `tei(a:R4, b:I4)`             | **T**est if **e**qual to **i**mmediate                | `T <- (a == b)`                                        |
+| R4I4  | `10001001` | `tnei(a:R4, b:I4)`            | **T**est if **n**ot **e**qual to **i**mmediate        | `T <- (a != b)`                                        |
+|       |            |                               | _**Branching and conditional ops**_                   |                                                        |
+| R4-4  | `10001010` | `j(addr:R4)`                  | **J**ump unconditionally                              | `rip <- addr`                                          |
+| R4-4  | `10001011` | `jct(index:R4)`               | **J**ump into **c**ode **t**able                      | `rip <- mem32(rip + 2 + s32(dst << 1))`                |
+| R4R4  | `10001100` | `jdt(index:R4, addr:R4)`      | **J**ump into **d**ata **t**able                      | `rip <- mem32(addr + s32(dst << 1))`                   |
+| | | |yolo: those jump insns may suck; unsure how much latency they force in the pipeline but it doesnt seem pretty |
+| R4-4  | `10001101` | `c_j(addr:R4)`                | **C**onditionally **j**ump                            | `if T { RIP <- addr }`                                 |
+| R4-4  | `10001110` | `jcall(addr:R4)`              | **J**ump: **Call** subroutine                         | `rps <- rps - 4; mem32(rps) <- rip; rip <- addr`       |
+| -     | `10001111` | `jret()`                      | **J**ump: **Ret**urn from subroutine                  | `rip <- mem32(rps); rps <- rps + 4`                    |
+| R4W4  | `10001110` | `c_lr(src:R4, dst:R4)`        | **C**onditionally **l**oad **r**egister               | `if T { dst <- src }`                                  |
+|       | ...        |                               | *Reserved*                                            |                                                        |
+| I12   | `1001----` | `c_ji(ipoff:Id12)`            | **C**onditionally **j**ump with IP-relative **i**mm.  | `if T { rip <- rip + 4 + s32(ipoff) }`                 |
+|       |            |                               | _**Arithmetic and bitwise logic**_                    |                                                        |
+| W4R4  | `10100000` | `bsext8(dst: W4, a:R4)`       | **S**ign-**ext**end from **8** to 32                  | `dst <- sign extend s8(a)`                             | 
+| W4R4  | `10100001` | `bsext16(dst: W4, a:R4)`      | **S**ign-**ext**end from **16** to 32                 | `dst <- sign extend s16(a)`                            |
+| W4R4  | `10100010` | `ineg(dst:W4, a:R4)`          | Arithmetic **neg**ative of value                      | `dst <- (-s32(a))`                                     |
+| A4R4  | `10100000` | `iadd(dst:A4, b:R4)`          | Arithmetic **add**                                    | `dst <- dst + b`                                       |
+| A4R4  | `10100001` | `isub(dst:A4, b:R4)`          | Arithmetic **sub**tract                               | `dst <- dst - b`                                       |
 | R    | `1010` | `band $dst $b`          | Bitwise **and**                                | `$dst = $dst & $b`                                       |
 | R    | `1011` | `bor $dst $b`           | Bitwise **or**                                 | `$dst = $dst \| $b`                                      |
 | R    | `1100` | `bxor $dst $b`          | Bitwise **xor**                                | `$dst = $dst ^ $b`                                       |
 | R    | `1101` | `bshl $dst $b`          | Bitwise **sh**ift **l**eft                     | `$dst = $dst << $b[:5]`                                      |
 | R    | `1110` | `bshr $dst $b`          | Bitwise **sh**ift **r**ight                    | `$dst = $dst >> $b[:5]`                                      |
-| R    | `1110` | `ashr $dst $b`         | **A**rithmetic **sh**ift **r**ight             | `$dst = $dst >> $b[:5]`                                      |
-
-Certain formats may have been chosen in a context where a smaller one would make
-sense (e.g. R4 instead of R5), but would be a worse fit for decoding.
+| R    | `1110` | `ashr $dst $b`         | **A**rithmetic **sh**ift **r**ight             | `$dst = $dst >>> $b[:5]`                                     |
 
 ### Opcode ranges
 
@@ -179,39 +185,30 @@ Bits belonging to neither the opcode or the instruction format **must** be `0`.
 
 When it comes to naming:
 
-- `Rx` refers to a *read* register (i.e. the instruction may only read from it) encoded over *x* bits
-- `Wx` refers to a *write* register (i.e. the instruction may only write to it) encoded over *x* bits
+- `Rx` refers to a *read-only* register encoded over *x* bits
+- `Ax` refers to a *read-write* register encoded over *x* bits
+- `Wx` refers to a *write-only* register encoded over *x* bits
 - `Ixy` refers to an *immediate* value with a multiplier of *x* encoded over *y* bits, where
     - No `x` means the value is not multiplied
-    - `d` means `2x` (`<<1`)
-    - `q` means `4x` (`<<2`)
+    - `d` means `*2` (`<<1`)
+    - `q` means `*4` (`<<2`)
+    - `o` means `*8` (`<<3`)
+- `-x` refers to unused bits in the instruction
 
 | Format | Operands | Instruction bits      |
 |--------|----------|-----------------------|
-| R4     | a        | `xxxx'xxxx'xxxx'aaaa` |
-| R4R4   | a, b     | `xxxx'xxxx'bbbb'aaaa` |
-| R4I8   | a, i     | `xxxx'iiii'iiii'aaaa` |
+| R4R4/R4W4/R4A4/R4-4 | a, b     | `xxxx'xxxx'bbbb'aaaa` |
+| R2I8   | a, i     | `xxxx'aaii'iiii'iiii` |
+| R4I8   | a, i     | `xxxx'aaaa'iiii'iiii` |
 | I12    | i        | `xxxx'iiii'iiii'iiii` |
-
-#### Type-R(egister)
-
-Provides 2 registers to address in total.
-
-- 0..4: Opcode
-- 5..: Register `$2`
-- 12..15: Register `$3`
-
-#### Type-I(mmediate):
-
-Provides 1 register to address plus a 8-bit immediate.
-
-- 8..15: Immediate `imm8`
 
 ## Memory layout
 
-- `0x000000000`..`0xEFFFFFFF`: 
+TODO
 
 ### Framebuffer (bank `0xFFFF`)
+
+TODO
 
 Optional.
 
