@@ -108,13 +108,6 @@ The `T` bit is manipulated by certain arithmetic and test instructions.
 
 ## Instructions
 
-TODO:
-
-- sel bytes (kind of like PEXT but at byte level) - would allow doing zext
-- check more of what SH might have interesting
-- check more of what RV might have interesting
-- check more of what Thumb might have interesting
-
 |Format | Instr[0:7] | Mnemonic                      | Description                                           | Pseudocode                                             |
 |-------|------------|-------------------------------|-------------------------------------------------------|--------------------------------------------------------|
 |       |            |                               | _**Loads**_                                           |                                                        |
