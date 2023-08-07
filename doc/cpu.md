@@ -39,6 +39,9 @@ Certain registers are *always* 0-initialized on reset: `rip`.
 The instruction pointer initializes in an implementation-defined manner (typically `0x0`).
 TODO: this should not really be the case, memory mapping will make this make more sense
 
+"Specific-purpose" registers may usually still be used as general purpose
+registers in specific contexts
+
 | Mnemonic   | Encoding | Use or ABI meaning                            | Saved    |
 |------------|----------|-----------------------------------------------|----------|
 |            |          | **General purpose registers**                 |          |
@@ -48,14 +51,14 @@ TODO: this should not really be the case, memory mapping will make this make mor
 | `r3`       | `0x3`    | ABI: Arg #2                                   | Caller   |
 | `r4`       | `0x4`    | ABI: Arg #3                                   | Caller   |
 | `r5`       | `0x5`    | ABI: Arg #4                                   | Caller   |
-| `r6`       | `0x6`    | ABI: Arg #5                                   | Caller   |
+| `r6`       | `0x6`    |                                               | Callee   |
 | `r7`       | `0x7`    |                                               | Callee   |
 | `r8`       | `0x8`    |                                               | Callee   |
 | `r9`       | `0x9`    |                                               | Callee   |
 | `r10`      | `0xA`    |                                               | Callee   |
 | `r11`      | `0xB`    |                                               | Callee   |
-| `r12`      | `0xC`    |                                               | Callee   |
 |            |          | **Specific-purpose registers**                |          |
+| `rret`     | `0xC`    | Return address from jump-and-link             | Caller   |
 | `rpl`      | `0xD`    | Literal pool start address                    | Callee   |
 | `rpg`      | `0xE`    | Global pool start address                     | Callee   | 
 | `rps`      | `0xF`    | Stack pointer                                 | Callee   |
@@ -152,21 +155,19 @@ TODO:
 | R4I4  | `10001001` | `tnei(a:R4, b:I4)`            | **T**est if **n**ot **e**qual to **i**mmediate        | `T <- (a != b)`                                        |
 |       |            |                               | _**Branching and conditional ops**_                   |                                                        |
 | R4-4  | `10001010` | `j(addr:R4)`                  | **J**ump unconditionally                              | `rip <- addr`                                          |
-| R4-4  | `10001011` | `jct(index:R4)`               | **J**ump into **c**ode **t**able                      | `rip <- mem32(rip + 2 + s32(dst << 1))`                |
-| R4R4  | `10001100` | `jdt(index:R4, addr:R4)`      | **J**ump into **d**ata **t**able                      | `rip <- mem32(addr + s32(dst << 1))`                   |
-| | | |yolo: those jump insns may suck; unsure how much latency they force in the pipeline but it doesnt seem pretty |
-| R4-4  | `10001101` | `c_j(addr:R4)`                | **C**onditionally **j**ump                            | `if T { RIP <- addr }`                                 |
-| R4-4  | `10001110` | `jcall(addr:R4)`              | **J**ump: **Call** subroutine                         | `rps <- rps - 4; mem32(rps) <- rip; rip <- addr`       |
-| -     | `10001111` | `jret()`                      | **J**ump: **Ret**urn from subroutine                  | `rip <- mem32(rps); rps <- rps + 4`                    |
-| R4W4  | `10001110` | `c_lr(src:R4, dst:R4)`        | **C**onditionally **l**oad **r**egister               | `if T { dst <- src }`                                  |
+| R4-4  | `10001011` | `c_j(addr:R4)`                | **C**onditionally **j**ump                            | `if T { RIP <- addr }`                                 |
+| R4W4  | `10001100` | `jal(addr:R4, target:R4)`     | **J**ump **a**nd **l**ink                             | `ret <- rip + 2; rip <- addr`                          |
+| R4W4  | `10001111` | `c_lr(src:R4, dst:R4)`        | **C**onditionally **l**oad **r**egister               | `if T { dst <- src }`                                  |
 |       | ...        |                               | *Reserved*                                            |                                                        |
-| I12   | `1001----` | `c_ji(ipoff:Id12)`            | **C**onditionally **j**ump with IP-relative **i**mm.  | `if T { rip <- rip + 4 + s32(ipoff) }`                 |
+| I12   | `1001----` | `jali(ipoff:Id12)`            | **J**ump **a**nd **l**ink to **i**mmediate            | `ret <- rip + 2; rip <- rip + 2 + s32(ipoff)`          |
+| I12   | `1010----` | `c_ji(ipoff:Id12)`            | **C**onditionally **j**ump with IP-relative **i**mm.  | `if T { rip <- rip + 2 + s32(ipoff) }`                 |
 |       |            |                               | _**Arithmetic and bitwise logic**_                    |                                                        |
-| W4R4  | `10100000` | `bsext8(dst: W4, a:R4)`       | **S**ign-**ext**end from **8** to 32                  | `dst <- sign extend s8(a)`                             | 
-| W4R4  | `10100001` | `bsext16(dst: W4, a:R4)`      | **S**ign-**ext**end from **16** to 32                 | `dst <- sign extend s16(a)`                            |
-| W4R4  | `10100010` | `ineg(dst:W4, a:R4)`          | Arithmetic **neg**ative of value                      | `dst <- (-s32(a))`                                     |
-| A4R4  | `10100000` | `iadd(dst:A4, b:R4)`          | Arithmetic **add**                                    | `dst <- dst + b`                                       |
-| A4R4  | `10100001` | `isub(dst:A4, b:R4)`          | Arithmetic **sub**tract                               | `dst <- dst - b`                                       |
+| all very WIP below this point |
+| W4R4  | `10110000` | `bsext8(dst: W4, a:R4)`       | **S**ign-**ext**end from **8** to 32                  | `dst <- sign extend s8(a)`                             | 
+| W4R4  | `10110001` | `bsext16(dst: W4, a:R4)`      | **S**ign-**ext**end from **16** to 32                 | `dst <- sign extend s16(a)`                            |
+| W4R4  | `10110010` | `ineg(dst:W4, a:R4)`          | Arithmetic **neg**ative of value                      | `dst <- (-s32(a))`                                     |
+| A4R4  | `10110000` | `iadd(dst:A4, b:R4)`          | Arithmetic **add**                                    | `dst <- dst + b`                                       |
+| A4R4  | `10110001` | `isub(dst:A4, b:R4)`          | Arithmetic **sub**tract                               | `dst <- dst - b`                                       |
 | R    | `1010` | `band $dst $b`          | Bitwise **and**                                | `$dst = $dst & $b`                                       |
 | R    | `1011` | `bor $dst $b`           | Bitwise **or**                                 | `$dst = $dst \| $b`                                      |
 | R    | `1100` | `bxor $dst $b`          | Bitwise **xor**                                | `$dst = $dst ^ $b`                                       |
