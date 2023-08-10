@@ -201,6 +201,7 @@ The `T` bit is manipulated by certain arithmetic and test instructions.
 | `11010110` |         | hole                               |                                                       |                                                        |
 | `11010111` |         | hole                               |                                                       |                                                        |
 | `11011---` |         | hole                               |                                                       |                                                        |
+| `1110----` |         | hole                               |                                                       |                                                        |
 | `1111----` |         | hole                               |                                                       |                                                        |
 
 ### Opcode ranges
