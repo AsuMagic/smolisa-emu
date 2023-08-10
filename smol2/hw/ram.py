@@ -10,6 +10,7 @@ class RAM(Elaboratable):
         self.wdata = Signal(16)
 
         self.addr = Signal(16)
+        self.bank = Signal(16)
         self.rdata = Signal(16)
     
     def elaborate(self, platform):
@@ -50,10 +51,11 @@ class RAM(Elaboratable):
         assert (yield self.rdata) == 0xAB
         yield
 
-dut = RAM(16, [0 for _ in range(16)])
+if __name__ == "__main__":
+    dut = RAM(16, [0 for _ in range(16)])
 
-sim = Simulator(dut)
-sim.add_clock(1e-6)
-sim.add_sync_process(dut.testbench)
-with sim.write_vcd("ram.vcd"):
-    sim.run()
+    sim = Simulator(dut)
+    sim.add_clock(1e-6)
+    sim.add_sync_process(dut.testbench)
+    with sim.write_vcd("ram.vcd"):
+        sim.run()

@@ -1,5 +1,5 @@
-from smolisa_py.asm.assembler import *
-import smolisa_py.asm.macros as m
+from smol2.asm.assembler import *
+import smol2.asm.macros as m
 
 asm = Asm()
 

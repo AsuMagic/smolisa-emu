@@ -1,5 +1,4 @@
 from nmigen import *
-from nmigen.sim import Simulator
 
 from control import AluOp
 
@@ -11,6 +10,9 @@ class ALU(Elaboratable):
         self.out = Signal(16)
         self.flag_zero = Signal(16)
     
+    def ports(self):
+        return [self.a, self.b, self.op, self.out, self.flag_zero]
+
     def elaborate(self, platform):
         m = Module()
 
@@ -34,7 +36,7 @@ class ALU(Elaboratable):
                     self.out[0:8].eq(self.a[8:16]),
                     self.out[8:16].eq(self.b[0:8])
                 ]
-        
+
         m.d.comb += self.flag_zero.eq(self.out == 0)
 
         return m

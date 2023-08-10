@@ -43,7 +43,7 @@ def main_parser(parser=None):
     return parser
 
 
-def main_runner(parser, args, design, platform=None, name="top", ports=(), processes=()):
+def main_runner(parser, args, design, platform=None, name="top", ports=(), engine="pysim", processes=()):
     if args.action == "generate":
         fragment = Fragment.get(design, platform)
         generate_type = args.generate_type
@@ -69,13 +69,13 @@ def main_runner(parser, args, design, platform=None, name="top", ports=(), proce
 
     if args.action == "simulate":
         fragment = Fragment.get(design, platform)
-        sim = Simulator(fragment)
+        sim = Simulator(fragment, engine="cxxsim")
         sim.add_clock(args.sync_period)
         
         for process in processes:
             sim.add_sync_process(process)
         
-        with sim.write_vcd(vcd_file=args.vcd_file, gtkw_file=args.gtkw_file, traces=ports):
+        with sim.write_vcd(vcd_file=args.vcd_file.name, gtkw_file=args.gtkw_file.name, traces=ports):
             sim.run_until(args.sync_period * args.sync_clocks, run_passive=True)
 
 

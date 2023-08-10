@@ -9,7 +9,7 @@ auto FrameBuffer::get_char(std::size_t x, std::size_t y) const -> FrameBuffer::C
 	const std::size_t base_address = (x + y * width) * sizeof_fb_char;
 
 	return {
-		.code                = m_character_data.at(base_address),
+		.code                = char(m_character_data.at(base_address) & 0b0111'1111),
 		.palette_front_entry = char((m_character_data.at(base_address + 1) & masks::lower_nibble) >> 0),
 		.palette_back_entry  = char((m_character_data.at(base_address + 1) & masks::upper_nibble) >> 4)};
 }
@@ -46,7 +46,7 @@ FrameBuffer::FrameBuffer(FrameBufferConfig config) :
 	m_image.create(unsigned(width * m_glyph_width), unsigned(height * m_glyph_height));
 
 	m_window.create(sf::VideoMode{m_image.getSize().x, m_image.getSize().y}, "smolisa framebuffer");
-	m_window.setVerticalSyncEnabled(true);
+	m_window.setVerticalSyncEnabled(false);
 	m_window.setFramerateLimit(30);
 
 	clear();

@@ -32,5 +32,5 @@ if (${OPTION_FRAMEBUFFER} STREQUAL ON)
 endif()
 
 # Video stream generator
-add_executable(example-generate-video-stream "smolisa_py/examples/generate_video_stream.cpp")
+add_executable(example-generate-video-stream "smol2/examples/generate_video_stream.cpp")
 component(example-generate-video-stream)

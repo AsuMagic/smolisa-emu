@@ -1,6 +1,7 @@
-from nmigen import *
-from nmigen.sim import Simulator
 from enum import Enum
+from nmigen import *
+from nmigen.asserts import *
+from nmigen.sim import Simulator
 
 RegAddrSrc = Enum('RegAddrSrc', 'R1 R2 R3 REF_IP', start=0)
 RegDataSrc = Enum('RegDataSrc', 'IMM8_LOW IMM8_HIGH MEM8 MEM16 ALU REG2', start=0)
@@ -46,22 +47,22 @@ class Control(Elaboratable):
         self.new_op = Signal(1)
 
         self.alu_op = Signal(AluOp)
-    
+
     def immediate_load(self, m, data_source):
         m.d.comb += [
             self.bus.reg_we.eq(1),
             self.bus.reg_waddr_src.eq(RegAddrSrc.R1),
             self.bus.reg_data_src.eq(data_source)
         ]
-    
+
     def exec1_li(self, m):
         self.immediate_load(m, RegDataSrc.IMM8_LOW)
         m.next = "fetch"
-    
+
     def exec1_liu(self, m):
         self.immediate_load(m, RegDataSrc.IMM8_HIGH)
         m.next = "fetch"
-    
+
     def exec1_lb(self, m):
         m.d.comb += self.bus.reg_addr1_src.eq(RegAddrSrc.R1)
         m.next = "exec2_lb"
@@ -84,7 +85,7 @@ class Control(Elaboratable):
             self.bus.reg_addr2_src.eq(RegAddrSrc.R2)
         ]
         m.next = "exec2_sb"
-    
+
     def exec2_sb(self, m):
         m.d.comb += [
             self.bus.mem_we.eq(1),
@@ -101,7 +102,7 @@ class Control(Elaboratable):
     def exec2_lw(self, m):
         m.d.comb += self.bus.mem_addr_src.eq(MemAddrSrc.REG1)
         m.next = "exec3_lw"
-    
+
     def exec3_lw(self, m):
         m.d.comb += [
             self.bus.reg_we.eq(1),
@@ -116,7 +117,7 @@ class Control(Elaboratable):
             self.bus.reg_addr2_src.eq(RegAddrSrc.R2)
         ]
         m.next = "exec2_sb"
-    
+
     def exec2_sw(self, m):
         m.d.comb += [
             self.bus.mem_we.eq(1),
@@ -132,7 +133,7 @@ class Control(Elaboratable):
             self.bus.reg_addr2_src.eq(RegAddrSrc.R2)
         ]
         m.next = "exec2_lrz"
-    
+
     def exec2_lrz(self, m):
         m.d.comb += [
             self.bus.alu_a_src.eq(AluDataSrc.REG1),
@@ -146,7 +147,7 @@ class Control(Elaboratable):
                 self.bus.reg_we.eq(1),
                 self.bus.reg_data_src.eq(RegDataSrc.REG2)
             ]
-        
+
         m.next = "fetch"
 
     def exec1_lrnz(self, m):
@@ -155,7 +156,7 @@ class Control(Elaboratable):
             self.bus.reg_addr2_src.eq(RegAddrSrc.R2)
         ]
         m.next = "exec2_lrnz"
-    
+
     def exec2_lrnz(self, m):
         m.d.comb += [
             self.bus.alu_a_src.eq(AluDataSrc.REG1),
@@ -169,7 +170,7 @@ class Control(Elaboratable):
                 self.bus.reg_we.eq(1),
                 self.bus.reg_data_src.eq(RegDataSrc.REG2)
             ]
-        
+
         m.next = "fetch"
 
     def exec1_alu(self, m):
@@ -179,13 +180,13 @@ class Control(Elaboratable):
             self.bus.reg_addr2_src.eq(RegAddrSrc.R3),
         ]
         m.next = "exec2_alu"
-    
+
     def exec2_alu(self, m):
         m.d.comb += [
             self.bus.alu_op.eq(self.alu_op),
             self.bus.alu_a_src.eq(AluDataSrc.REG1),
             self.bus.alu_b_src.eq(AluDataSrc.REG2),
-            
+
             self.bus.reg_we.eq(1),
             self.bus.reg_waddr_src.eq(RegAddrSrc.R1),
             self.bus.reg_data_src.eq(RegDataSrc.ALU)
@@ -228,52 +229,52 @@ class Control(Elaboratable):
 
                     with m.Case(Ins.LIU):
                         self.exec1_liu(m)
-                    
+
                     with m.Case(Ins.LB):
                         self.exec1_lb(m)
-                    
+
                     with m.Case(Ins.SB):
                         self.exec1_sb(m)
-                    
+
                     with m.Case(Ins.LW):
                         self.exec1_lw(m)
-                    
+
                     with m.Case(Ins.SW):
                         self.exec1_sw(m)
-                    
+
                     with m.Case(Ins.LRZ):
                         self.exec1_lrz(m)
-                    
+
                     with m.Case(Ins.LRNZ):
                         self.exec1_lrnz(m)
 
                     with m.Case(Ins.ADD, Ins.SUB, Ins.AND, Ins.OR, Ins.XOR, Ins.SHL, Ins.SHR, Ins.SWB):
                         self.exec1_alu(m)
-            
+
             with m.State("exec2_lb"):
                 self.exec2_lb(m)
-            
+
             with m.State("exec3_lb"):
                 self.exec3_lb(m)
-            
+
             with m.State("exec2_sb"):
                 self.exec2_sb(m)
-            
+
             with m.State("exec2_lw"):
                 self.exec2_lw(m)
-            
+
             with m.State("exec3_lw"):
                 self.exec3_lw(m)
-            
+
             with m.State("exec2_alu"):
                 self.exec2_alu(m)
-            
+
             with m.State("exec2_lrz"):
                 self.exec2_lrz(m)
 
             with m.State("exec2_lrnz"):
                 self.exec2_lrnz(m)
-                
+
 
         return m
 
@@ -281,18 +282,18 @@ class Control(Elaboratable):
         # dumb testbench, doesn't really test anything
 
         # fetch
-        
+
         # li $g0 8
         yield self.mem_data.eq(Ins.LI.value | (0b0000 << 4) | (8 << 8))
         yield # exec1
         yield self.mem_data.eq(0) # not kept for more than one clock cycle
-        
+
         # li $g1 42
         yield # fetch
         yield self.mem_data.eq(Ins.LI.value | (0b0001 << 4) | (42 << 8))
         yield # exec1
         yield self.mem_data.eq(0) # not kept for more than one clock cycle
-        
+
         # add $g0 $g0 $g1
         yield # fetch
         yield self.mem_data.eq(Ins.ADD.value | (0b0000 << 4) | (0b0001 << 8) | (0b0001 << 12))
@@ -307,10 +308,16 @@ class Control(Elaboratable):
         yield # exec2
         yield self.mem_data.eq(0) # not kept for more than one clock cycle
 
-dut = Control()
+    def formal(self):
+        m = Module()
+        m.submodules.ctrl = Control()
 
-sim = Simulator(dut)
-sim.add_clock(1e-6)
-sim.add_sync_process(dut.testbench)
-with sim.write_vcd("control.vcd"):
-    sim.run()
+
+if __name__ == "__main__":
+    dut = Control()
+
+    sim = Simulator(dut)
+    sim.add_clock(1e-6)
+    sim.add_sync_process(dut.testbench)
+    with sim.write_vcd("control.vcd"):
+        sim.run()

@@ -1,4 +1,4 @@
-from smolisa_py.asm.assembler import *
+from smol2.asm.assembler import *
 
 asm = Asm()
 

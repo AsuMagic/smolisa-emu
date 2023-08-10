@@ -5,13 +5,13 @@ from regfile import *
 from alu import *
 from main import *
 
-from smolisa_py.examples.fib import asm as fib_asm
+from smol2.examples.fib import asm as fib_asm
 
 # TODO: this might contain more logic than expected from a data path
 class DataPath(Elaboratable):
     def __init__(self, init_rom):
         self.ctrl = Control()
-        self.ram = RAM(1024, init_rom)
+        self.ram = RAM(8192, init_rom)
         self.regs = RegFile()
         self.alu = ALU()
 
@@ -100,13 +100,14 @@ class DataPath(Elaboratable):
                 m.d.comb += self.ram.wmask.eq(0b11)
         with m.Else():
             m.d.comb += self.ram.wmask.eq(0b00)
-        
+
+        m.d.comb += self.ram.bank.eq(self.regs.rbank)
         with m.Switch(self.bus.mem_addr_src):
             with m.Case(MemAddrSrc.IP):
                 m.d.comb += self.ram.addr.eq(self.regs.rip)
             with m.Case(MemAddrSrc.REG1):
                 m.d.comb += self.ram.addr.eq(self.regs.rdata1)
-        
+
         with m.Switch(self.bus.mem_data_src):
             with m.Case(MemDataSrc.IP):
                 m.d.comb += self.ram.wdata.eq(self.regs.rip)
@@ -122,17 +123,8 @@ class DataPath(Elaboratable):
         self.resolve_alu_src(m, self.alu.b, self.bus.alu_b_src)
 
         return m
-    
-    def testbench(self):
-        def reg_name(id):
-            if id == 0xE:
-                return "ip"
-            if id == 0xF:
-                return "bank"
-            if id == 0x10: # not a reg, just for traces
-                return "(op)"
-            return "g" + str(id)
 
+    def testbench(self):
         print(''.join(f"{reg_name(i):<5}" for i in range(17)))
 
         while True:
@@ -141,7 +133,7 @@ class DataPath(Elaboratable):
 
                 for i in range(16):
                     trace += f"{(yield self.regs.regs[i]):04x} "
-                
+
                 trace += "{:04x}".format((yield self.ctrl.opcode))
                 print(trace)
 
@@ -149,5 +141,5 @@ class DataPath(Elaboratable):
 
 
 if __name__ == "__main__":
-    design = DataPath(fib_asm.as_int16_list(1024))
+    design = DataPath(fib_asm.as_int16_list(256))
     main(design, processes=[design.testbench], ports=[design.regs.rip])

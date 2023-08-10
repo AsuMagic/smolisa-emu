@@ -36,8 +36,7 @@ void Core::dispatch()
 	case Opcode::Lb:
 	{
 		const auto [raddr, rdst, _r3] = formats::TypeR{instruction};
-		registers[rdst] &= masks::upper_byte;
-		registers[rdst] |= mmu.get_byte(registers[raddr]);
+		registers[rdst]               = (registers[rdst] & masks::upper_byte) | mmu.get_byte(registers[raddr]);
 		cycles += 4;
 		break;
 	}
@@ -169,7 +168,7 @@ void Core::dispatch()
 	//       Only check for changes when actually accessing memory?
 	registers[RegisterId::Bank] = Word(mmu.set_current_bank(Bank(registers[RegisterId::Bank])));
 
-	std::cout << debug_state() << '\n';
+	// std::cout << debug_state() << '\n';
 
 	++executed_ops;
 }
@@ -194,12 +193,13 @@ void Core::boot()
 			const float avg_mhz = (1.0e-6f * float(cycles)) / time_elapsed;
 
 			fmt::print(
-				"{:.3f}s: {:9} ins, {:9} cycles, avg CPI {:.3f}, avg MHz {:.3f}\n",
+				"{:.3f}s: {:9} ins, {:9} cycles, avg CPI {:.3f}, avg MHz {:.3f} (R13={:04})\n",
 				time_elapsed,
 				executed_ops,
 				cycles,
 				avg_cpi,
-				avg_mhz);
+				avg_mhz,
+				registers[RegisterId(13)]);
 		}
 	}
 }
