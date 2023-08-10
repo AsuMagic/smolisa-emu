@@ -4,12 +4,6 @@ from .register import *
 
 import sys
 
-def resolve_relative_address(ins_address, label_address):
-    relative_source = ins_address + 2
-    relative_jump = label_address - relative_source
-    print(relative_jump)
-    return relative_jump
-
 class Asm:
     def __init__(self):
         self.sequences = []
@@ -25,20 +19,48 @@ class Asm:
             )
         self.labels[name] = address
 
+    def resolve_label(self, name) -> int:
+        if name not in self.labels:
+            raise ValueError(
+                f"Could not find label {name}"
+            )
+
+        return self.labels[name]
+
     def serialize_token(self, token):
         if isinstance(token, Instruction):
             return token.as_bytes()
         elif isinstance(token, bytes):
             return token
         else:
-            assert None
+            assert False
+
+    def token_len(self, token):
+        if isinstance(token, Instruction):
+            return len(token)
+        elif isinstance(token, bytes):
+            return len(token)
+        elif isinstance(token, Label):
+            return 0
+        elif isinstance(token, Absolute):
+            return 4
+
+    def resolve_patch(self, ins_address, imm):
+        if isinstance(imm.value, Absolute):
+            return self.resolve_label(imm.value.name)
+        elif isinstance(imm.value, Relative):
+            relative_source = ins_address + 2
+            relative_jump = self.resolve_label(imm.value) - relative_source
+            return relative_jump
+
+        assert False, f"Immediate type {type(imm)} failed to be resolved"
 
     def as_bytes(self, size):
         rom = bytearray([0x00 for i in range(size)])
 
         # TODO: detect sequence overlaps
 
-        self._process_labels()
+        self._find_labels()
         
         for seq_offset, seq in self.sequences:
             offset = seq_offset
@@ -48,10 +70,17 @@ class Asm:
                     continue
 
                 if isinstance(token, Instruction):
+                    token.patch_references(lambda imm: \
+                        self.resolve_patch(offset, imm)
+                    )
                     token.check()
+
+                if isinstance(token, Absolute):
+                    token = self.resolve_label(token.name).to_bytes(4, byteorder="little")
 
                 token_bytes = self.serialize_token(token)
                 assert token_bytes is not None, f"Erroneous token of type {type(token)}"
+                assert len(token_bytes) == self.token_len(token)
 
                 if offset + len(token_bytes) > len(rom):
                     raise ValueError(f"ROM file too small for sequence of size {len(token_bytes)} at offset 0x{offset:04X}")
@@ -64,15 +93,12 @@ class Asm:
     def to_rom(self, rom_size=65536):
         sys.stdout.buffer.write(self.as_bytes(rom_size))
 
-    def _process_labels(self):
+    def _find_labels(self):
         for seq_offset, seq in self.sequences:
             offset = seq_offset
-            
-            for token in seq:
+
+            for i, token in enumerate(seq):
                 if isinstance(token, Label):
                     self.set_label(offset, token.name)
-                elif isinstance(token, Instruction):
-                    token.patch_references(lambda label: resolve_relative_address(offset, self.labels[label]))
-                    offset += len(self.serialize_token(token))
-                elif isinstance(token, bytes):
-                    offset += len(token)
+                
+                offset += self.token_len(token)

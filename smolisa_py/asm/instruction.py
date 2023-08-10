@@ -17,7 +17,11 @@ class RegAccessMode(Enum):
     R2 = 2
     Rh2 = 3
 
-LabelRef = str
+Relative = str
+
+@dataclass
+class Absolute:
+    name: str
 
 def is_access_valid(reg: Reg, access_method: RegAccessMode) -> bool:
     if access_method == RegAccessMode.R2:
@@ -36,7 +40,7 @@ def check_access(reg: Reg, access_method: RegAccessMode):
 
 @dataclass
 class Immediate:
-    value: int | LabelRef
+    value: int | Relative | Absolute
     signed: int
     shift: int = 0
 
@@ -81,8 +85,21 @@ def bytes_u32(value: int):
     return value.to_bytes(4, byteorder="little")
 
 class Instruction:
+    def as_bytes(self):
+        self_len = len(self)
+        if self_len == 2:
+            return bytes_u16(self.as_int())
+        elif self_len == 4:
+            return bytes_u32(self.as_int())
+        else:
+            assert False, "Unsupported instruction length"
+
     @abc.abstractmethod
-    def as_bytes(self) -> bytes:
+    def as_int(self) -> int:
+        pass
+
+    @abc.abstractmethod
+    def __len__(self) -> int:
         pass
 
     def patch_references(self, imm_lookup_callback):
@@ -92,7 +109,7 @@ class Instruction:
             attr = getattr(self, field.name)
             if isinstance(attr, Immediate) and not attr.is_materialized():
                 assert patched_count == 0, "Cannot patch multiple immediates"
-                attr.value = imm_lookup_callback(attr.value)
+                attr.value = imm_lookup_callback(attr)
                 patched_count += 1
 
     def check(self):
@@ -105,8 +122,11 @@ class Instruction:
 class RawInsU16(Instruction):
     raw: int
 
-    def as_bytes(self):
-        return bytes_u16(self.raw)
+    def __len__(self):
+        return 2
+
+    def as_int(self):
+        return self.raw
 
 @dataclass
 class InsR4R4(Instruction):
@@ -118,8 +138,11 @@ class InsR4R4(Instruction):
         check_access(self.a, RegAccessMode.R4)
         check_access(self.b, RegAccessMode.R4)
 
-    def as_bytes(self):
-        return bytes_u16(
+    def __len__(self):
+        return 2
+
+    def as_int(self):
+        return (
             self.a.id
             | (self.b.id << 4)
             | (self.op << 8)
@@ -130,11 +153,14 @@ class InsR4(Instruction):
     op: int
     r: Reg
 
+    def __len__(self):
+        return 2
+
     def check(self):
         check_access(self.r, RegAccessMode.R4)
 
-    def as_bytes(self):
-        return bytes_u16(
+    def as_int(self):
+        return (
             self.r.id
             | (self.op << 8)
         )
@@ -145,12 +171,15 @@ class InsR4I4(Instruction):
     r: Reg
     imm: Immediate
 
+    def __len__(self):
+        return 2
+
     def check(self):
         check_access(self.r, RegAccessMode.R4)
         check_imm(self.imm, 4)
 
-    def as_bytes(self):
-        return bytes_u16(
+    def as_int(self):
+        return (
             self.r.id
             | (self.imm.unscaled(4) << 4)
             | (self.op << 8)
@@ -163,13 +192,16 @@ class InsR4R4E16(Instruction):
     b: Reg
     imm: Immediate
 
+    def __len__(self):
+        return 4
+
     def check(self):
         check_access(self.a, RegAccessMode.R4)
         check_access(self.b, RegAccessMode.R4)
         check_imm(self.imm, 16)
 
-    def as_bytes(self):
-        return bytes_u32(
+    def as_int(self):
+        return (
             self.a.id
             | (self.b.id << 4)
             | (self.op << 8)
@@ -183,13 +215,16 @@ class InsRh2R2I6(Instruction):
     b: Reg
     imm: Immediate
 
+    def __len__(self):
+        return 2
+
     def check(self):
         check_access(self.a, RegAccessMode.Rh2)
         check_access(self.b, RegAccessMode.R2)
         check_imm(self.imm, 6)
 
-    def as_bytes(self):
-        return bytes_u16(
+    def as_int(self):
+        return (
             (self.a.id & 0b11)
             | ((self.b.id & 0b11) << 2)
             | (self.imm.unscaled(6) << 4)
@@ -202,12 +237,15 @@ class InsR4I8(Instruction):
     r: Reg
     imm: Immediate
 
+    def __len__(self):
+        return 2
+
     def check(self):
         check_access(self.r, RegAccessMode.R4)
         check_imm(self.imm, 8)
 
-    def as_bytes(self):
-        return bytes_u16(
+    def as_int(self):
+        return (
             self.r.id
             | (self.imm.unscaled(8) << 4)
             | (self.op << 8)
@@ -220,15 +258,18 @@ class InsR4I8E16(Instruction):
     r: Reg
     imm: Immediate
 
+    def __len__(self):
+        return 4
+
     def check(self):
         check_access(self.r, RegAccessMode.R4)
         check_imm(self.imm, 24)
 
-    def as_bytes(self):
+    def as_int(self):
         imm = self.imm.unscaled(24)
         imm_lower8 = imm & 0xFF
         imm_upper16 = imm >> 8
-        return bytes_u32(
+        return (
             self.r.id
             | (imm_lower8 << 4)
             | (self.op << 8)
@@ -241,14 +282,17 @@ class InsI12E16(Instruction):
     op: int
     imm: Immediate
 
+    def __len__(self):
+        return 4
+
     def check(self):
         check_imm(self.imm, 28)
 
-    def as_bytes(self):
+    def as_int(self):
         imm = self.imm.unscaled(28)
         imm_lower12 = imm & 0xFFF
         imm_upper16 = imm >> 12
-        return bytes_u16(
+        return (
             imm_lower12
             | (self.op << 8)
             | (imm_upper16 << 16)
@@ -259,11 +303,14 @@ class InsI12(Instruction):
     op: int
     imm: Immediate
 
+    def __len__(self):
+        return 2
+
     def check(self):
         check_imm(self.imm, 12)
 
-    def as_bytes(self):
-        return bytes_u16(
+    def as_int(self):
+        return (
             self.imm.unscaled(12)
             | (self.op << 8)
         )
@@ -280,13 +327,13 @@ def l32(addr: Reg, dst: Reg):
 def c_lr(src: Reg, dst: Reg):
     return InsR4R4(0b0000_0011, a=src, b=dst)
 
-def l8ow(base: Reg, dst: Reg, off: int):
+def l8ow(base: Reg, dst: Reg, off: int | Absolute):
     return InsR4R4E16(0b0000_0100, a=base, b=dst, imm=Immediate(off, signed=True, shift=0))
 
-def l16ow(base: Reg, dst: Reg, off: int):
+def l16ow(base: Reg, dst: Reg, off: int | Absolute):
     return InsR4R4E16(0b0000_0101, a=base, b=dst, imm=Immediate(off, signed=True, shift=1))
 
-def l32ow(base: Reg, dst: Reg, off: int):
+def l32ow(base: Reg, dst: Reg, off: int | Absolute):
     return InsR4R4E16(0b0000_0110, a=base, b=dst, imm=Immediate(off, signed=True, shift=2))
 
 def lr(src: Reg, dst: Reg):
@@ -298,37 +345,37 @@ def ls8(addr: Reg, dst: Reg):
 def ls16(addr: Reg, dst: Reg):
     return InsR4R4(0b0000_1001, a=addr, b=dst)
 
-def ls8ow(base: Reg, dst: Reg, off: int):
+def ls8ow(base: Reg, dst: Reg, off: int | Absolute):
     return InsR4R4E16(0b0000_0100, a=base, b=dst, imm=Immediate(off, signed=True, shift=0))
 
-def ls16ow(base: Reg, dst: Reg, off: int):
+def ls16ow(base: Reg, dst: Reg, off: int | Absolute):
     return InsR4R4E16(0b0000_0101, a=base, b=dst, imm=Immediate(off, signed=True, shift=1))
 
-def l8o(base: Reg, dst: Reg, off: int):
+def l8o(base: Reg, dst: Reg, off: int | Absolute):
     return InsRh2R2I6(0b0000_1100, a=base, b=dst, imm=Immediate(off, signed=False, shift=0))
 
-def l16o(base: Reg, dst: Reg, off: int):
+def l16o(base: Reg, dst: Reg, off: int | Absolute):
     return InsRh2R2I6(0b0001_0000, a=base, b=dst, imm=Immediate(off, signed=False, shift=1))
 
-def l32o(base: Reg, dst: Reg, off: int):
+def l32o(base: Reg, dst: Reg, off: int | Absolute):
     return InsRh2R2I6(0b0001_0100, a=base, b=dst, imm=Immediate(off, signed=False, shift=2))
 
-def ls8o(base: Reg, dst: Reg, off: int):
+def ls8o(base: Reg, dst: Reg, off: int | Absolute):
     return InsRh2R2I6(0b0001_1000, a=base, b=dst, imm=Immediate(off, signed=False, shift=0))
 
-def ls16o(base: Reg, dst: Reg, off: int):
+def ls16o(base: Reg, dst: Reg, off: int | Absolute):
     return InsRh2R2I6(0b0001_1100, a=base, b=dst, imm=Immediate(off, signed=False, shift=1))
 
-def lsi(dst: Reg, imm: int):
+def lsi(dst: Reg, imm: int | Absolute):
     return InsR4I8(0b0010_0000, r=dst, imm=Immediate(imm, signed=True))
 
-def lsih(dst: Reg, imm: int):
+def lsih(dst: Reg, imm: int | Absolute):
     return InsR4I8(0b0011_0000, r=dst, imm=Immediate(imm, signed=True))
 
-def lsiw(dst: Reg, imm: int):
+def lsiw(dst: Reg, imm: int | Absolute):
     return InsR4I8E16(0b01000_0000, r=dst, imm=Immediate(imm, signed=True))
 
-def liprel(dst: Reg, imm: int | LabelRef):
+def liprel(dst: Reg, imm: int | Relative):
     return InsR4I8E16(0b0101_0000, r=dst, imm=Immediate(imm, signed=True))
 
 def s8(addr: Reg, src: Reg):
@@ -343,25 +390,25 @@ def s32(addr: Reg, src: Reg):
 def push(src: Reg):
     return InsR4(0b0110_0011, r=src)
 
-def s8ow(base: Reg, src: Reg, imm: int):
+def s8ow(base: Reg, src: Reg, imm: int | Absolute):
     return InsR4R4E16(0b0110_0100, a=base, b=src, imm=Immediate(imm, signed=True, shift=0))
 
-def s16ow(base: Reg, src: Reg, imm: int):
+def s16ow(base: Reg, src: Reg, imm: int | Absolute):
     return InsR4R4E16(0b0110_0101, a=base, b=src, imm=Immediate(imm, signed=True, shift=1))
 
-def s32ow(base: Reg, src: Reg, imm: int):
+def s32ow(base: Reg, src: Reg, imm: int | Absolute):
     return InsR4R4E16(0b0110_0110, a=base, b=src, imm=Immediate(imm, signed=True, shift=2))
 
 def brk():
     return RawInsU16(0b0110_0111_0000_0000)
 
-def s8o(base: Reg, src: Reg, imm: int):
+def s8o(base: Reg, src: Reg, imm: int | Absolute):
     return InsRh2R2I6(0b0110_1000, a=base, b=src, imm=Immediate(imm, signed=False, shift=0))
 
-def s16o(base: Reg, src: Reg, imm: int):
+def s16o(base: Reg, src: Reg, imm: int | Absolute):
     return InsRh2R2I6(0b0110_1100, a=base, b=src, imm=Immediate(imm, signed=False, shift=1))
 
-def s32o(base: Reg, src: Reg, imm: int):
+def s32o(base: Reg, src: Reg, imm: int | Absolute):
     return InsRh2R2I6(0b0111_0000, a=base, b=src, imm=Immediate(imm, signed=False, shift=2))
 
 def tltu(a: Reg, b: Reg):
@@ -382,22 +429,22 @@ def te(a: Reg, b: Reg):
 def tne(a: Reg, b: Reg):
     return InsR4R4(0b0111_1001, a, b)
 
-def tltsi(a: Reg, b_imm: int):
+def tltsi(a: Reg, b_imm: int | Absolute):
     return InsR4I4(0b0111_1010, a, imm=Immediate(b_imm, signed=True))
 
-def tgesi(a: Reg, b_imm: int):
+def tgesi(a: Reg, b_imm: int | Absolute):
     return InsR4I4(0b0111_1011, a, imm=Immediate(b_imm, signed=True))
 
-def tei(a: Reg, b_imm: int):
+def tei(a: Reg, b_imm: int | Absolute):
     return InsR4I4(0b0111_1100, a, imm=Immediate(b_imm, signed=True))
 
-def tnei(a: Reg, b_imm: int):
+def tnei(a: Reg, b_imm: int | Absolute):
     return InsR4I4(0b0111_1101, a, imm=Immediate(b_imm, signed=True))
 
 def tbz(a: Reg):
     return InsR4(0b0111_1110, a)
 
-def pl_l32(dst: Reg, off: int):
+def pl_l32(dst: Reg, off: int | Absolute):
     return InsR4I8(0b1000_0000, dst, imm=Immediate(off, signed=False, shift=2))
 
 def j(addr: Reg):
@@ -409,10 +456,10 @@ def c_j(addr: Reg):
 def jal(addr: Reg, target: Reg):
     return InsR4R4(0b1001_0010, a=addr, b=target)
 
-def jali(imm: int | LabelRef):
+def jali(imm: int | Relative):
     return InsI12E16(0b1010_0000, imm=Immediate(imm, signed=True, shift=1))
 
-def c_ji(imm: int | LabelRef):
+def c_ji(imm: int | Relative):
     return InsI12(0b1011_0000, imm=Immediate(imm, signed=True, shift=1))
 
 def bsext8(dst: Reg, a: Reg):
@@ -436,13 +483,13 @@ def isub(a_dst: Reg, b: Reg):
 def iadd(a_dst: Reg, b: Reg):
     return InsR4R4(0b1100_0110, a=a_dst, b=b)
 
-def iaddsi(a_dst: Reg, b: int):
+def iaddsi(a_dst: Reg, b: int | Absolute):
     return InsR4I4(0b1100_0111, r=a_dst, imm=Immediate(b, True, 0))
 
-def iaddsiw(dst: Reg, a: Reg, b: int):
+def iaddsiw(dst: Reg, a: Reg, b: int | Absolute):
     return InsR4R4E16(0b1100_1000, a=dst, b=a, imm=Immediate(b, True, 0))
 
-def iaddsi_tnz(a_dst: Reg, b: int):
+def iaddsi_tnz(a_dst: Reg, b: int | Absolute):
     return InsR4I4(0b1100_1001, r=a_dst, imm=Immediate(b, True, 0))
 
 def band(a_dst: Reg, b: Reg):
