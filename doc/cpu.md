@@ -59,6 +59,7 @@ mutate it as if it were volatile.
 | `r5`       | `0x5`    | ABI: Arg #5                                   | If arg   |
 | `r6`       | `0x6`    | ABI: Arg #6                                   | If arg   |
 | `r7`       | `0x7`    |                                               | No       |
+| `r8`       | `0x8`    |                                               | No       |
 | `r9`       | `0x9`    |                                               | No       |
 | `r10`      | `0xA`    |                                               | No       |
 | `r11`      | `0xB`    |                                               | No       |
@@ -119,7 +120,7 @@ The `T` bit is manipulated by certain arithmetic and test instructions.
 
 ## Instructions
 
-| Instr[0:7] |Format   | Mnemonic                           | Description                                           | Pseudocode                                             |
+| Instr[8:]  |Format   | Mnemonic                           | Description                                           | Pseudocode                                             |
 |------------|---------|------------------------------------|-------------------------------------------------------|--------------------------------------------------------|
 |            |         |                                    | _**Loads**_                                           |                                                        |
 | `00000000` | R4W4    | `l8(addr:R4, dst:W4)`              | **L**oad u**8** from memory                           | `dst <- u32(mem8(addr))`                               |
@@ -129,7 +130,7 @@ The `T` bit is manipulated by certain arithmetic and test instructions.
 | `00000100` | R4W4E16 | `l8ow(base:R4, dst:W4, off:E16)`   | **L**oad u**8** with **o**ffset (**w**ide) ±32K       | `dst <- u32(mem8(base + s32(imm)))`                    |
 | `00000101` | R4W4E16 | `l16ow(base:R4, dst:W4, off:E16)`  | **L**oad u**16** with **o**ffset (**w**ide) ±64K      | `dst <- u32(mem16(base + s32(imm) << 1))`              |
 | `00000110` | R4W4E16 | `l32ow(base:R4, dst:W4, off:E16)`  | **L**oad u**32** with **o**ffset (**w**ide) ±128K     | `dst <- mem32(base + s32(imm) << 2))`                  |
-| `00000111` |         | `brk`                              | Implementation-defined **br**ea**k**                  | N/A                                                    |
+| `00000111` | R4W4    | `lr(src:R4, dst:R4)`               | **L**oad **r**egister                                 | `dst <- src`                                           |
 | `00001000` | R4W4    | `ls8(addr:R4, dst:W4)`             | **L**oad **s8** from memory                           | `dst <- s32(mem8(addr))`                               |
 | `00001001` | R4W4    | `ls16(addr:R4, dst:W4)`            | **L**oad **s16** from memory                          | `dst <- s32(mem16(addr))`                              |
 | `00001010` | R4W4E16 | `ls8ow(base:R4, dst:W4, off:E16)`  | **L**oad **s8** with **o**ffset (**w**ide) ±32K       | `dst <- s32(mem8(base + u32(imm)))`                    |
@@ -151,10 +152,10 @@ The `T` bit is manipulated by certain arithmetic and test instructions.
 | `01100100` | R4R4E16 | `s8ow(base:R4, src:R4, imm:E16)`   | **S**tore u**8** with **o**ffset (**w**ide) ±32K      | `mem8(addr + s32(imm)) <- src[:7]`                     |
 | `01100101` | R4R4E16 | `s16ow(base:R4, src:R4, imm:E16)`  | **S**tore u**16** with **o**ffset (**w**ide) ±64K     | `mem16(addr + s32(imm) << 1)) <- src[:15]`             |
 | `01100110` | R4R4E16 | `s32ow(base:R4, src:R4, imm:E16)`  | **S**tore u**32** with **o**ffset (**w**ide) ±128K    | `mem32(addr + s32(imm) << 2)) <- src`                  |
-| `01100111` |         | hole                               |                                                       |                                                        |
-| `011010--` | Rh2R2I6 | `s8o(base:Rh2, dst:R2, off:I6)`    | **S**tore u**8** with **o**ffset <= 63                | `mem8(base + u32(imm)) <- src[:7]`                     |
-| `011011--` | Rh2R2I6 | `s16o(base:Rh2, dst:R2, off:I6)`   | **S**tore u**16** with **o**ffset <= 126              | `mem16(base + u32(imm)) <- src[:15]`                   |
-| `011100--` | Rh2R2I6 | `s32o(base:Rh2, dst:R2, off:I6)`   | **S**tore u**32** with **o**ffset <= 189              | `mem32(base + u32(imm)) <- src`                        |
+| `01100111` |         | `brk`                              | Implementation-defined **br**ea**k**                  | N/A                                                    |
+| `011010--` | Rh2R2I6 | `s8o(base:Rh2, src:R2, off:I6)`    | **S**tore u**8** with **o**ffset <= 63                | `mem8(base + u32(imm)) <- src[:7]`                     |
+| `011011--` | Rh2R2I6 | `s16o(base:Rh2, src:R2, off:I6)`   | **S**tore u**16** with **o**ffset <= 126              | `mem16(base + u32(imm)) <- src[:15]`                   |
+| `011100--` | Rh2R2I6 | `s32o(base:Rh2, src:R2, off:I6)`   | **S**tore u**32** with **o**ffset <= 189              | `mem32(base + u32(imm)) <- src`                        |
 |            |         |                                    | _**Tests and `T`-bit manipulation**_                  |                                                        |
 | `01110100` | R4R4    | `tltu(a:R4, b:R4)`                 | **T**est if **l**ower **t**han (**u**nsigned)         | `T <- (a < b)`                                         |
 | `01110101` | R4R4    | `tlts(a:R4, b:R4)`                 | **T**est if **l**ower **t**han (**s**igned)           | `T <- (s32(a) < s32(b))`                               |
@@ -166,7 +167,7 @@ The `T` bit is manipulated by certain arithmetic and test instructions.
 | `01111011` | R4I4    | `tgesi(a:R4, b:I4)`                | **T**est if **g**reater or **e**qual (**s**igned)     | `T <- (s32(a) >= s32(b))`                              |
 | `01111100` | R4I4    | `tei(a:R4, b:I4)`                  | **T**est if **e**qual to **i**mmediate                | `T <- (a == b)`                                        |
 | `01111101` | R4I4    | `tnei(a:R4, b:I4)`                 | **T**est if **n**ot **e**qual to **i**mmediate        | `T <- (a != b)`                                        |
-| `01111110` | R4I4    | `tbz(a:R4)`                        | **T**est if any **b**yte is **z**ero                  | TODO                                                   |
+| `01111110` | R4      | `tbz(a:R4)`                        | **T**est if any **b**yte is **z**ero                  | TODO                                                   |
 | `01111111` |         | hole                               |                                                       |                                                        |
 |            |         |                                    | _**Pool loads**_                                      |                                                        |
 | `1000----` | W4I8    | `pl_l32(dst:R4, imm:U8)`           | r**pl**: **L**oad u**32** from memory with off <=1K   | `dst <- mem32(rpl + (u32(imm) << 2))`                  |
@@ -186,7 +187,7 @@ The `T` bit is manipulated by certain arithmetic and test instructions.
 | `11000101` | A4R4    | `isub(dst:A4, b:R4)`               | Integer **sub**tract                                  | `dst <- dst - b`                                       |
 | `11000110` | A4R4    | `iadd(dst:A4, b:R4)`               | Integer **add**                                       | `dst <- dst + b`                                       |
 | `11000111` | A4I4    | `iaddsi(dst:A4, b:I4)`             | Integer **add s**igned **i**mmediate                  | `dst <- dst + s32(b)`                                  |
-| `11001000` | A4R4E16 | `iaddsiw(dst:A4, a:I4, b:E16)`     | Integer **add s**igned **i**mmediate (**w**ide)       | `dst <- a + s32(b)`                                    |
+| `11001000` | A4R4E16 | `iaddsiw(dst:A4, a:R4, b:E16)`     | Integer **add s**igned **i**mmediate (**w**ide)       | `dst <- a + s32(b)`                                    |
 | `11001001` | A4I4    | `iaddsi_tnz(dst:A4, b:I4)`         | Integer **add s**igned **i**mm. then **t**est for **n**on-**z**ero | `dst <- dst + s32(b); T <- (dst != 0)`    |
 | `11001010` | A4R4    | `band(dst:A4, b:R4)`               | Bitwise **AND**                                       | `dst <- dst & b`                                       |
 | `11001011` | A4R4    | `bor(dst:A4, b:R4)`                | Bitwise **OR**                                        | `dst <- dst \| b`                                      |
@@ -217,6 +218,7 @@ latency.
 In the following table:
 
 - `x` are bits ignored for a specific instruction format.
+- `o` are bits belonging to the opcode.
 - `(h)` (optional) stands for High meaning that the most significant bit is to
 be set when indexing a register (when `x < 4 bits`), e.g.
     - `R2` indexes `(r0, r1, r2, r3)`
@@ -236,12 +238,20 @@ These bits are always skipped when fetching the next instruction.
 Immediates present in the main instruction `u16` represent the higher bits if
 present, whereas `Ex` will represent the lower bits.
 
-| Format | Operands | Instruction bits      |
-|--------|----------|-----------------------|
-| R4R4/R4W4/R4A4/R4-4 | a, b     | `xxxx'xxxx'bbbb'aaaa` |
-| R2I8   | a, i     | `xxxx'aaii'iiii'iiii` |
-| R4I8   | a, i     | `xxxx'aaaa'iiii'iiii` |
-| I12    | i        | `xxxx'iiii'iiii'iiii` |
+In the following table, `A` and `W` are always replaced with `R` as the
+encodings would be otherwise equivalent.
+
+| Format  | Operands | Next two bytes        | Instruction bits      |
+|---------|----------|-----------------------|-----------------------|
+| R4      | a        | x                     | `oooo'oooo'xxxx'aaaa` |
+| R4R4    | a, b     | x                     | `oooo'oooo'bbbb'aaaa` |
+| R4I4    | a, i     | x                     | `oooo'oooo'iiii'aaaa` |
+| R4I8    | a, i     | x                     | `oooo'iiii'iiii'aaaa` |
+| R4I8E16 | a, i     | `iiii'iiii'iiii'iiii` | `oooo'iiii'iiii'aaaa` |
+| R4R4E16 | a, b, i  | `iiii'iiii'iiii'iiii` | `oooo'oooo'bbbb'aaaa` |
+| Rh2R2I6 | a, b, i  | x                     | `oooo'ooii'iiii'bbaa` |
+| I12     | i        | x                     | `oooo'iiii'iiii'iiii` |
+| I12E16  | i        | `iiii'iiii'iiii'iiii` | `oooo'iiii'iiii'iiii` |
 
 ## Memory layout
 
