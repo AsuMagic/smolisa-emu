@@ -68,6 +68,37 @@ void Core::dispatch()
 				rip += 2;
 			}
 		},
+		[&](CLR x) {
+			if (t_bit)
+			{
+				regs[x.dst] = regs[x.src];
+			}
+			rip += 2;
+		},
+		// TODO: l8ow l16ow l32ow
+		[&](LR x) {
+			regs[x.dst] = regs[x.src];
+			rip += 2;
+		},
+		[&](LS8 x) {
+			const auto [state, value] = mmu.get_u8(regs[x.addr]);
+
+			if (check_access_or_fault(state))
+			{
+				regs[x.dst] = s32(s8(value));
+				rip += 2;
+			}
+		},
+		[&](LS16 x) {
+			const auto [state, value] = mmu.get_u16(regs[x.addr]);
+
+			if (check_access_or_fault(state))
+			{
+				regs[x.dst] = s32(s16(value));
+				rip += 2;
+			}
+		},
+		// TODO: ls8ow, ls16ow, l8o, l16o, l32o, ls8o, ls16o
 		[&](LSI x) {
 			regs[x.dst] = x.imm;
 			rip += 2;
@@ -81,7 +112,7 @@ void Core::dispatch()
 			rip += 4;
 		},
 		[&](BRK x) {
-			fmt::print("Hit BRK");
+			fmt::print("BRK called @{}\n", rip);
 			rip += 2;
 		},
 		[&](TLTU x) {
@@ -182,6 +213,10 @@ void Core::dispatch()
 			const auto sum = s32(regs[x.a_dst]) + x.b;
 			regs[x.a_dst] = sum;
 			t_bit = (sum != 0);
+			rip += 2;
+		},
+		[&](BAND x) {
+			regs[x.a_dst] &= regs[x.b];
 			rip += 2;
 		},
 		[&](BSLI x) {

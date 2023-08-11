@@ -3,119 +3,93 @@ import smol2.asm.macros as macros
 
 asm = Asm()
 
-video_rom_start_address = 0x2000
-video_rom_start_bank = 0x0001
-fb_start_address = 0x2001
-fb_stop_address = 0x2FA1
-vsync_address = 0x2FD0
-mmio_bank = 0xFFFF
 palette_white = 0x0011
 
-reg_rom_ptr = RG0
-reg_rom_bank = RG1
-reg_fb_stop_address = RG2
-reg_fb_address = RG3
-reg_char_group = RG4
-reg_char_group_stop_address = RG5
-reg_is_set = RG6
-reg_mmio_bank = RG7
-reg_one = RG8
-reg_two = RG9
-reg_label = RG10
-reg_palette_white = RG11
-reg_tmp = RG13
+reg_rom_ptr = r0
+reg_fb_stop_address = r1
+reg_fb_address = r2
+reg_cst_mask_1 = r3
+reg_cst_palette_white = r4
+reg_char_group = r12
+reg_char_group_stop_address = r5
+reg_vsync_address = r6
+reg_single_bit = r11
+# reg_palette_white = RG11
 
 asm.at(0x0000, [
-    *macros.load_imm16_assume_zero(reg_rom_ptr, video_rom_start_address),
-    *macros.load_imm16_assume_zero(reg_rom_bank, video_rom_start_bank),
-    *macros.load_imm16_assume_zero(reg_mmio_bank, mmio_bank),
-    *macros.load_imm16_assume_zero(reg_one, 1),
-    *macros.load_imm16_assume_zero(reg_two, 2),
-    *macros.load_imm16_assume_zero(reg_palette_white, palette_white),
-    *macros.load_imm16_assume_zero(reg_fb_stop_address, fb_stop_address),
+    liprel(rpl, "Literals"),
+
+    lsi(dst=reg_rom_ptr, imm=Absolute("Video")),
+    lsi(dst=reg_cst_mask_1, imm=1),
+    lsi(dst=reg_cst_palette_white, imm=palette_white),
+
+    pl_l32(reg_fb_stop_address, 8),
+    pl_l32(reg_vsync_address, 4),
 
     # while(true)
     Label("prepareframe"),
-        *macros.load_imm16(reg_fb_address, fb_start_address),
+        pl_l32(reg_fb_address, 0),
 
         # while (framebuffer_address != framebuffer_stop_address)
         Label("drawframe"),
-        
-            # fetch char group from the data bank
-            *macros.load_register(RBANK, reg_rom_bank),
-            LB(addr=reg_rom_ptr, dst=reg_char_group),
-
-            # move to the mmio bank
-            *macros.load_register(RBANK, reg_mmio_bank),
+            l8(addr=reg_rom_ptr, dst=reg_char_group),
 
             # const char* char_group_stop_address = framebuffer_address + (8 * 2);
-            *macros.load_imm16(reg_tmp, 8 * 2),
-            ADD(dst=reg_char_group_stop_address, lhs=reg_fb_address, rhs=reg_tmp),
-
-            *macros.load_label(reg_label, "drawpixelgroup"),
+            iaddsiw(dst=reg_char_group_stop_address, a=reg_fb_address, b=16),
 
             # while (framebuffer_address != char_group_stop_address)
             Label("drawpixelgroup"),
 
                 # bool is_set = (char_group & 0x01) != 0;
-                AND(dst=reg_is_set, lhs=reg_char_group, rhs=reg_one),
+                lr(src=reg_char_group, dst=reg_single_bit),
+                band(a_dst=reg_single_bit, b=reg_cst_mask_1),
 
                 # *framebuffer_address = is_set ? PALETTE_BLACK : PALETTE_WHITE
-                # PALETTE_BLACK is equal to 0x0000, so xor this out and conditionally load palette_white
-                XOR(reg_tmp, reg_tmp, reg_tmp),
-                LRNZ(dst=reg_tmp, src=reg_palette_white, cond=reg_is_set),
-                SB(addr=reg_fb_address, src=reg_tmp),
+                # PALETTE_BLACK is equal to 0x0000
+                lsi(dst=r9, imm=0),
+                tei(reg_single_bit, 0),
+                c_lr(src=reg_cst_palette_white, dst=r9),
+                s8(addr=reg_fb_address, src=r9),
 
                 # char_group = char_group >> 1;
-                SHR(dst=reg_char_group, lhs=reg_char_group, rhs=reg_one),
+                bsri(reg_char_group, 1),
 
                 # framebuffer_address += 2;
-                ADD(reg_fb_address, reg_fb_address, reg_two),
+                iaddsi(reg_fb_address, 2),
 
                 # (handle looping)
-                # NOTE: there is no other label on this loop so we preload the "drawpixelgroup" label
-                # while (framebuffer_address != char_group_stop_address)
-                SUB(dst=reg_tmp, lhs=reg_fb_address, rhs=reg_char_group_stop_address),
-                LRNZ(dst=RIP, src=reg_label, cond=reg_tmp),
+                tne(reg_fb_address, reg_char_group_stop_address),
+                brk(),
+                c_ji("drawpixelgroup"),
 
                 # fallthrough
-            
-            ADD(reg_rom_ptr, reg_rom_ptr, reg_one),
 
-            # if (rom_ptr == 0)
-            # => if (rom_ptr != 0) skip
-            *macros.load_label(reg_label, "skipbankswitch"),
-            LRNZ(dst=RIP, src=reg_label, cond=reg_rom_ptr),
+            iaddsi(reg_rom_ptr, 1),
+            brk(),
 
-                *macros.load_imm16(reg_rom_ptr, video_rom_start_address),
-                ADD(dst=reg_rom_bank, lhs=reg_rom_bank, rhs=reg_one),
+            # (handle looping)
+            # while (framebuffer_address != framebuffer_stop_address)
+            tne(reg_fb_address, reg_fb_stop_address),
+            c_ji("drawframe"),
 
-                # fallthrough
-            
-            Label("skipbankswitch"),
-                # (handle looping)
-                # while (framebuffer_address != framebuffer_stop_address)
-                *macros.load_label(reg_label, "drawframe"),
-                SUB(reg_tmp, reg_fb_address, reg_fb_stop_address),
-                LRNZ(dst=RIP, src=reg_label, cond=reg_tmp),
-
-                # fallthrough
+            # fallthrough
         
         # wait_vsync()
-        *macros.load_imm16(reg_tmp, vsync_address),
-        SB(addr=reg_tmp, src=reg_tmp), # doesn't matter what we write
+        s8(addr=reg_vsync_address, src=r0), # doesn't matter what we write
 
         # (handle looping)
         # while (true)
-        *macros.load_label(reg_label, "prepareframe"),
-        *macros.load_register(dst=RIP, src=reg_label)
-])
+        jali("prepareframe"),
 
-with open("./assets/badapple.bin", "rb") as file:
-    asm.at(0x2000, [
-        Label("videostart"),
-        bytes(file.read())
-    ])
+    brk(), # FIXME: Align(2)
+    Label("Literals"),
+    (0xF0002001).to_bytes(4, byteorder="little"), # [0] fb start
+    (0xF0002FD0).to_bytes(4, byteorder="little"), # [1] vsync
+    (0xF0002FA1).to_bytes(4, byteorder="little"), # [2] fb end
+
+    Label("Video"),
+    open("./assets/badapple.bin", "rb").read()
+])
 
 if __name__ == "__main__":
     asm.to_rom(2048 * 1024)
