@@ -5,43 +5,47 @@
 #include <functional>
 #include <vector>
 
-enum class Bank : Word
+enum class AccessStatus
 {
-	Invalid   = 0x0000,
-	UserBegin = 0x0001,
-	UserEnd   = 0xFFFE,
-	Mmio      = 0xFFFF
+	Ok,
+	ErrorUnmapped,
+	ErrorMisaligned,
+	ErrorMmioGranularity,
+	ErrorMmioPeripheralError,
+};
+
+enum class AccessGranularity
+{
+	U8,
+	U16,
+	U32
 };
 
 struct Mmu
 {
-	static constexpr auto address_space_size = (1 << (sizeof(Word) * 8));
-	static constexpr auto system_memory_size = 8192;
-	static constexpr auto bank_memory_size   = address_space_size - system_memory_size;
+	static constexpr auto address_space_size = (std::uint64_t(1) << (sizeof(Word) * 8));
+	static constexpr auto system_memory_size = std::uint64_t(0x1000'0000);
 
-	static constexpr auto is_address_banked(Addr addr) -> bool { return addr >= system_memory_size; }
+	static constexpr auto mmio_start_address = std::uint32_t(0xF000'0000);
 
-	static constexpr auto mmio_address(Addr real_address) -> Addr { return real_address - system_memory_size; }
+	static constexpr auto mmio_address(Addr real_address) -> Addr { return real_address - mmio_start_address; }
 
-	std::vector<Byte> ram;
+	std::vector<u8> ram;
 
-	Bank current_bank = Bank::Invalid;
+	std::function<std::pair<AccessStatus, u32>(Addr, AccessGranularity)>       mmio_read_callback;
+	std::function<AccessStatus(Addr, u32, AccessGranularity)>                  mmio_write_callback;
 
-	std::function<Byte(Addr)>       mmio_read_callback;
-	std::function<void(Addr, Byte)> mmio_write_callback;
+	explicit Mmu();
 
-	explicit Mmu(std::size_t bank_count = 128);
+	[[nodiscard]] auto is_mmio(Addr addr) const -> bool { return addr >= mmio_start_address; };
+	[[nodiscard]] auto is_mapped(Addr addr) const -> bool { return is_mmio(addr) || addr < system_memory_size; }
 
-	auto set_current_bank(Bank new_bank) -> Bank;
+	[[nodiscard]] auto get_u8(Addr addr) const -> std::pair<AccessStatus, u8>;
+	auto               set_u8(Addr addr, u8 data) -> AccessStatus;
 
-	[[nodiscard]] auto bank_count() const -> std::size_t;
-	[[nodiscard]] auto ram_offset(Addr addr) const -> std::size_t;
+	[[nodiscard]] auto get_u16(Addr addr) const -> std::pair<AccessStatus, u16>;
+	auto               set_u16(Addr addr, u16 data) -> AccessStatus;
 
-	[[nodiscard]] auto is_mmio(Addr addr) const -> bool;
-
-	[[nodiscard]] auto get_byte(Addr addr) const -> Byte;
-	void               set_byte(Addr addr, Byte data);
-
-	[[nodiscard]] auto get_word(Addr addr) const -> Word;
-	void               set_word(Addr addr, Word data);
+	[[nodiscard]] auto get_u32(Addr addr) const -> std::pair<AccessStatus, u32>;
+	auto               set_u32(Addr addr, u32 data) -> AccessStatus;
 };

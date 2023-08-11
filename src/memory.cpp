@@ -4,93 +4,137 @@
 #include <fmt/core.h>
 #include <stdexcept>
 
-Mmu::Mmu(std::size_t bank_count) : ram(system_memory_size + bank_memory_size * bank_count) {}
+Mmu::Mmu() : ram(system_memory_size) {}
 
-auto Mmu::set_current_bank(Bank new_bank) -> Bank
+auto Mmu::get_u8(Addr addr) const -> std::pair<AccessStatus, u8>
 {
-	if (new_bank == Bank::Invalid || new_bank == Bank::Mmio || Byte(new_bank) < bank_count() + 1)
+	if (!is_mapped(addr))
 	{
-		current_bank = new_bank;
-	}
-	else
-	{
-		fmt::print(stderr, "Note: Emulated machine set an invalid bank {}, setting as 0 (invalid)\n", Byte(new_bank));
-		current_bank = Bank::Invalid;
+		return {AccessStatus::ErrorUnmapped, 0};
 	}
 
-	return current_bank;
-}
-
-auto Mmu::bank_count() const -> std::size_t { return (ram.size() - system_memory_size) / bank_memory_size; }
-
-auto Mmu::ram_offset(Addr addr) const -> std::size_t
-{
-	if (is_address_banked(addr))
-	{
-		switch (current_bank)
-		{
-		case Bank::Invalid:
-		{
-			throw std::runtime_error{fmt::format(
-				"Attempted illegal byte access at address {:#06x}: tried "
-				"addressing invalid bank",
-				addr)};
-		}
-
-		case Bank::Mmio:
-		{
-			fmt::print(stderr, "Emulator bug, ram_offset() is invalid within MMIO areas");
-			std::terminate();
-		}
-
-		default:
-		{
-			// fmt::print(stderr, "bk read @{:#06x}\n", addr);
-			return addr + (std::size_t(current_bank) - std::size_t(Bank::UserBegin)) * bank_memory_size;
-		}
-		}
-	}
-
-	return addr;
-}
-
-auto Mmu::is_mmio(Addr addr) const -> bool { return is_address_banked(addr) && current_bank == Bank::Mmio; }
-
-auto Mmu::get_byte(Addr addr) const -> Byte
-{
 	if (is_mmio(addr))
 	{
 		// Fails if MMIO is not set up
-		return mmio_read_callback(mmio_address(addr));
+		const auto [err, v] = mmio_read_callback(mmio_address(addr), AccessGranularity::U8);
+		return {err, u8(v)};
 	}
 
-	return ram[ram_offset(addr)];
+	return {AccessStatus::Ok, ram[addr]};
 }
 
-void Mmu::set_byte(Addr addr, Byte data)
+auto Mmu::set_u8(Addr addr, u8 data) -> AccessStatus
 {
+	if (!is_mapped(addr))
+	{
+		return AccessStatus::ErrorUnmapped;
+	}
+
 	if (is_mmio(addr))
 	{
 		// Fails if MMIO is not set up
-		mmio_write_callback(mmio_address(addr), data);
-		return;
+		return mmio_write_callback(mmio_address(addr), data, AccessGranularity::U8);
 	}
 
-	ram[ram_offset(addr)] = data;
+	ram[addr] = data;
+	return AccessStatus::Ok;
 }
 
-auto Mmu::get_word(Addr addr) const -> Word
+auto Mmu::get_u16(Addr addr) const -> std::pair<AccessStatus, u16>
 {
+	if (!is_mapped(addr))
+	{
+		return {AccessStatus::ErrorUnmapped, 0};
+	}
+
 	if ((addr & 0b1) != 0)
 	{
-		throw std::runtime_error{"Any 16-bit memory access must be 16-bit aligned"};
+		return {AccessStatus::ErrorMisaligned, 0};
 	}
 
-	return (get_byte(addr + 0) << 0) | (get_byte(addr + 1) << 8);
+	if (is_mmio(addr))
+	{
+		// Fails if MMIO is not set up
+		const auto [err, v] = mmio_read_callback(mmio_address(addr), AccessGranularity::U16);
+		return {err, u16(v)};
+	}
+
+	return {
+		AccessStatus::Ok,
+		ram[addr] | (ram[addr + 1] << 8)
+	};
 }
 
-void Mmu::set_word(Addr addr, Word data)
+auto Mmu::set_u16(Addr addr, u16 data) -> AccessStatus
 {
-	set_byte(addr, Byte(data & 0xFF));
-	set_byte(addr + 1, Byte((data >> 8) & 0xFF));
+	if (!is_mapped(addr))
+	{
+		return AccessStatus::ErrorUnmapped;
+	}
+
+	if ((addr & 0b1) != 0)
+	{
+		return AccessStatus::ErrorMisaligned;
+	}
+
+	if (is_mmio(addr))
+	{
+		// Fails if MMIO is not set up
+		return mmio_write_callback(mmio_address(addr), data, AccessGranularity::U16);
+	}
+
+	ram[addr] = data & 0xFF;
+	ram[addr + 1] = data >> 8;
+	return AccessStatus::Ok;
+}
+
+
+auto Mmu::get_u32(Addr addr) const -> std::pair<AccessStatus, u32>
+{
+	if (!is_mapped(addr))
+	{
+		return {AccessStatus::ErrorUnmapped, 0};
+	}
+
+	if ((addr & 0b11) != 0)
+	{
+		return {AccessStatus::ErrorMisaligned, 0};
+	}
+
+	if (is_mmio(addr))
+	{
+		// Fails if MMIO is not set up
+		const auto [err, v] = mmio_read_callback(mmio_address(addr), AccessGranularity::U32);
+		return {err, v};
+	}
+
+	return {
+		AccessStatus::Ok,
+		ram[addr] | (ram[addr + 1] << 8) | (ram[addr + 2] << 12) | (ram[addr + 3] << 16)
+	};
+}
+
+auto Mmu::set_u32(Addr addr, u32 data) -> AccessStatus
+{
+	if (!is_mapped(addr))
+	{
+		return AccessStatus::ErrorUnmapped;
+	}
+
+	if ((addr & 0b11) != 0)
+	{
+		return AccessStatus::ErrorMisaligned;
+	}
+
+	if (is_mmio(addr))
+	{
+		// Fails if MMIO is not set up
+		return mmio_write_callback(mmio_address(addr), data, AccessGranularity::U32);
+	}
+
+	ram[addr + 0] = (data >> 0) & 0xFF;
+	ram[addr + 1] = (data >> 8) & 0xFF;
+	ram[addr + 2] = (data >> 12) & 0xFF;
+	ram[addr + 3] = (data >> 16) & 0xFF;
+	return AccessStatus::Ok;
 }

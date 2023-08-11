@@ -20,9 +20,9 @@ struct RegisterFile
 
 struct Core
 {
-	RegisterFile        registers;
-	std::optional<Word> current_instruction;
-	Mmu                 mmu;
+	RegisterFile       registers;
+	std::optional<u32> current_instruction;
+	Mmu                mmu;
 
 	std::size_t executed_ops = 0;
 	std::size_t cycles       = 0;

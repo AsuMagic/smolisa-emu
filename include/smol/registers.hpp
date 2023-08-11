@@ -3,18 +3,20 @@
 #include <smol/types.hpp>
 #include <string>
 
-enum class RegisterId : Byte
+enum class RegisterId : u8
 {
-	Ip   = 14,
-	Bank = 15
+	RRET = 13,
+	RPL = 14,
+	RPS = 15
 };
 
-inline std::string register_name(RegisterId id)
+inline auto register_name(RegisterId id) -> std::string
 {
 	switch (id)
 	{
-	case RegisterId::Ip: return "ip";
-	case RegisterId::Bank: return "bank";
-	default: return std::string() + 'g' + std::to_string(int(id));
+	case RegisterId::RRET: return "rret";
+	case RegisterId::RPL: return "rpl";
+	case RegisterId::RPS: return "rps";
+	default: return std::string() + 'r' + std::to_string(int(id));
 	}
 }

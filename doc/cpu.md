@@ -148,7 +148,7 @@ The `T` bit is manipulated by certain arithmetic and test instructions.
 | `01100000` | R4R4    | `s8(addr:R4, src:R4)`              | **S**tore u**8** to memory                            | `mem8(addr) <- src[:7]`                                |
 | `01100001` | R4R4    | `s16(addr:R4, src:R4)`             | **S**tore u**16** to memory                           | `mem16(addr) <- src[:15]`                              |
 | `01100010` | R4R4    | `s32(addr:R4, src:R4)`             | **S**tore u**32** to memory                           | `mem32(addr) <- src`                                   |
-| `01100011` | R4-4    | `push(src:R4)`                     | **Push** to rps                                       | `rps <- rps - 4; mem32(rps) <- src`                    |
+| `01100011` | R4      | `push(src:R4)`                     | **Push** to rps                                       | `rps <- rps - 4; mem32(rps) <- src`                    |
 | `01100100` | R4R4E16 | `s8ow(base:R4, src:R4, imm:E16)`   | **S**tore u**8** with **o**ffset (**w**ide) ±32K      | `mem8(addr + s32(imm)) <- src[:7]`                     |
 | `01100101` | R4R4E16 | `s16ow(base:R4, src:R4, imm:E16)`  | **S**tore u**16** with **o**ffset (**w**ide) ±64K     | `mem16(addr + s32(imm) << 1)) <- src[:15]`             |
 | `01100110` | R4R4E16 | `s32ow(base:R4, src:R4, imm:E16)`  | **S**tore u**32** with **o**ffset (**w**ide) ±128K    | `mem32(addr + s32(imm) << 2)) <- src`                  |
@@ -172,10 +172,10 @@ The `T` bit is manipulated by certain arithmetic and test instructions.
 |            |         |                                    | _**Pool loads**_                                      |                                                        |
 | `1000----` | W4I8    | `pl_l32(dst:R4, imm:U8)`           | r**pl**: **L**oad u**32** from memory with off <=1K   | `dst <- mem32(rpl + (u32(imm) << 2))`                  |
 |            |         |                                    | _**Branching and conditional ops**_                   |                                                        |
-| `10010000` | R4-4    | `j(addr:R4)`                       | **J**ump unconditionally                              | `rip <- addr`                                          |
-| `10010001` | R4-4    | `c_j(addr:R4)`                     | **C**onditionally **j**ump                            | `if T { RIP <- addr }`                                 |
+| `10010000` | R4      | `j(addr:R4)`                       | **J**ump unconditionally                              | `rip <- addr`                                          |
+| `10010001` | R4      | `c_j(addr:R4)`                     | **C**onditionally **j**ump                            | `if T { RIP <- addr }`                                 |
 | `10010010` | R4W4    | `jal(addr:R4, target:R4)`          | **J**ump **a**nd **l**ink                             | `ret <- rip + 2; rip <- addr`                          |
-| ...        |         |                                    | *Reserved*                                            |                                                        |
+|            |         | hole                               |                                                       |                                                        |
 | `1010----` | I12E16  | `jali(ipoff:I28)`                  | **J**ump **a**nd **l**ink to **i**mmediate ±128M      | `ret <- rip + 2; rip <- rip + 2 + s32(ipoff)`          |
 | `1011----` | I12     | `c_ji(ipoff:I12)`                  | **C**onditionally **j**ump with IP-relative **i**mm.  | `if T { rip <- rip + 2 + s32(ipoff) }`                 |
 |            |         |                                    | _**Arithmetic and bitwise logic**_                    |                                                        |
