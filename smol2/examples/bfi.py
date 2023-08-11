@@ -1,8 +1,6 @@
 from smol2.asm.assembler import *
 import smol2.asm.macros as m
 
-# Untested; might be completely broken
-
 asm = Asm()
 
 tape_base = 0x00008000
