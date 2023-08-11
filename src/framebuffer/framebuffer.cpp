@@ -1,3 +1,4 @@
+#include "smol/registers.hpp"
 #include <smol/framebuffer/framebuffer.hpp>
 
 #include <smol/masks.hpp>
@@ -28,9 +29,9 @@ auto FrameBuffer::get_palette_entry(std::size_t index) const -> FrameBuffer::Pal
 	const std::size_t base_address = index * sizeof_palette_entry;
 
 	return {
-		.r = Byte(m_palette_data[base_address]),
-		.g = Byte(m_palette_data[base_address + 1]),
-		.b = Byte(m_palette_data[base_address + 2])};
+		.r = u8(m_palette_data[base_address]),
+		.g = u8(m_palette_data[base_address + 1]),
+		.b = u8(m_palette_data[base_address + 2])};
 }
 
 FrameBuffer::FrameBuffer(FrameBufferConfig config) :
@@ -45,9 +46,9 @@ FrameBuffer::FrameBuffer(FrameBufferConfig config) :
 
 	m_image.create(unsigned(width * m_glyph_width), unsigned(height * m_glyph_height));
 
-	m_window.create(sf::VideoMode{m_image.getSize().x, m_image.getSize().y}, "smolisa framebuffer");
+	m_window.create(sf::VideoMode{m_image.getSize().x, m_image.getSize().y}, "smol2 framebuffer");
 	m_window.setVerticalSyncEnabled(false);
-	m_window.setFramerateLimit(30);
+	m_window.setFramerateLimit(m_fps_target);
 
 	clear();
 	rebuild();
@@ -69,6 +70,8 @@ void FrameBuffer::clear()
 			m_character_data.at(offset + 1) = 0b0000'0001;
 		}
 	}
+
+	m_frame_clock.restart();
 }
 
 void FrameBuffer::rebuild()
@@ -109,7 +112,14 @@ auto FrameBuffer::display() -> bool
 	m_window.draw(sprite);
 	m_window.display();
 
+	m_frame_clock.restart();
+
 	return m_window.isOpen();
+}
+
+auto FrameBuffer::should_present() -> bool
+{
+	return m_frame_clock.getElapsedTime().asSeconds() >= (1.0f / m_fps_target);
 }
 
 void FrameBuffer::update_char(Char c, std::size_t x, std::size_t y)
@@ -117,8 +127,8 @@ void FrameBuffer::update_char(Char c, std::size_t x, std::size_t y)
 	const auto [br, bg, bb] = get_palette_entry(c.palette_back_entry);
 	const auto [fr, fg, fb] = get_palette_entry(c.palette_front_entry);
 
-	const sf::Color back_color{br, bg, bb};
-	const sf::Color front_color{fr, fg, fb};
+	const sf::Color back_color(br, bg, bb);
+	const sf::Color front_color(fr, fg, fb);
 
 	for (std::size_t image_y = y * m_glyph_height; image_y < (y + 1) * m_glyph_height; ++image_y)
 	{
@@ -137,7 +147,7 @@ void FrameBuffer::update_char(Char c, std::size_t x, std::size_t y)
 	}
 }
 
-void FrameBuffer::display_simple_string(std::string_view s, std::size_t origin_x, std::size_t origin_y)
+void FrameBuffer::display_simple_string(std::string_view s, std::size_t origin_x, std::size_t origin_y, std::uint8_t color)
 {
 	std::size_t x = origin_x;
 	std::size_t y = origin_y;
@@ -167,7 +177,7 @@ void FrameBuffer::display_simple_string(std::string_view s, std::size_t origin_x
 
 		const auto addr = Addr((x + y * width) * sizeof_fb_char);
 		set_byte(addr, i);
-		set_byte(addr + 1, 0b0010'0001); // Alert color
+		set_byte(addr + 1, color);
 
 		++x;
 	}
@@ -190,10 +200,15 @@ auto FrameBuffer::byte_region(Addr addr) -> FrameBuffer::Region
 		return Region::VsyncWait;
 	}
 
+	if (addr == present_address)
+	{
+		return Region::PresentIfTimePassed;
+	}
+
 	return Region::Invalid;
 }
 
-auto FrameBuffer::set_byte(Addr addr, Byte byte) -> bool
+auto FrameBuffer::set_byte(Addr addr, u8 byte) -> bool
 {
 	switch (byte_region(addr))
 	{
@@ -222,18 +237,30 @@ auto FrameBuffer::set_byte(Addr addr, Byte byte) -> bool
 		return true;
 	}
 
+	case Region::PresentIfTimePassed:
+	{
+		if (!should_present())
+		{
+			return true;
+		}
+
+		display();
+		return true;
+	};
+
 	default:
 	case Region::Invalid: return false;
 	}
 }
 
-auto FrameBuffer::get_byte(Addr addr) const -> std::optional<Byte>
+auto FrameBuffer::get_byte(Addr addr) const -> std::optional<u8>
 {
 	switch (byte_region(addr))
 	{
 	case Region::FrameData: return m_character_data[addr - pixel_data_address];
 	case Region::PaletteData: return m_palette_data[addr - palette_address];
 	case Region::VsyncWait:
+	case Region::PresentIfTimePassed:
 	case Region::Invalid:
 	default: return std::nullopt;
 	}

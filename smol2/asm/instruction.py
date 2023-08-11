@@ -186,6 +186,26 @@ class InsR4I4(Instruction):
         )
 
 @dataclass
+class InsR4I5(Instruction):
+    op: int
+    r: Reg
+    imm: Immediate
+
+    def __len__(self):
+        return 2
+
+    def check(self):
+        check_access(self.r, RegAccessMode.R4)
+        check_imm(self.imm, 5)
+
+    def as_int(self):
+        return (
+            self.r.id
+            | (self.imm.unscaled(4) << 4)
+            | (self.op << 8)
+        )
+
+@dataclass
 class InsR4R4E16(Instruction):
     op: int
     a: Reg
@@ -373,10 +393,10 @@ def lsih(dst: Reg, imm: int | Absolute):
     return InsR4I8(0b0011_0000, r=dst, imm=Immediate(imm, signed=True))
 
 def lsiw(dst: Reg, imm: int | Absolute):
-    return InsR4I8E16(0b01000_0000, r=dst, imm=Immediate(imm, signed=True))
+    return InsR4I8E16(0b0100_0000, r=dst, imm=Immediate(imm, signed=True))
 
 def liprel(dst: Reg, imm: int | Relative):
-    return InsR4I8E16(0b0101_0000, r=dst, imm=Immediate(imm, signed=True))
+    return InsR4I8E16(0b0101_0000, r=dst, imm=Immediate(imm, signed=True, shift=1))
 
 def s8(addr: Reg, src: Reg):
     return InsR4R4(0b0110_0000, a=addr, b=src)
@@ -509,3 +529,12 @@ def bsr(a_dst: Reg, b: Reg):
 
 def basr(a_dst: Reg, b: Reg):
     return InsR4R4(0b1100_1111, a=a_dst, b=b)
+
+def bsli(a_dst: Reg, b: int | Absolute):
+    return InsR4I5(0b1101_0000, r=a_dst, imm=Immediate(b, False, 0))
+
+def bsri(a_dst: Reg, b: int | Absolute):
+    return InsR4I5(0b1101_0010, r=a_dst, imm=Immediate(b, False, 0))
+
+def basri(a_dst: Reg, b: int | Absolute):
+    return InsR4I5(0b1101_0100, r=a_dst, imm=Immediate(b, False, 0))

@@ -4,6 +4,8 @@
 
 #include <functional>
 #include <vector>
+#include <array>
+#include <string_view>
 
 enum class AccessStatus
 {
@@ -12,6 +14,17 @@ enum class AccessStatus
 	ErrorMisaligned,
 	ErrorMmioGranularity,
 	ErrorMmioPeripheralError,
+	ErrorMmioUnmapped,
+	Count
+};
+
+static constexpr std::array<std::string_view, int(AccessStatus::Count)> access_status_strings = {
+	"Valid memory access",
+	"Unmapped memory access",
+	"Misaligned memory access",
+	"Illegal granularity for MMIO address",
+	"Illegal address for MMIO peripheral",
+	"Unmapped MMIO address"
 };
 
 enum class AccessGranularity

@@ -176,8 +176,8 @@ The `T` bit is manipulated by certain arithmetic and test instructions.
 | `10010001` | R4      | `c_j(addr:R4)`                     | **C**onditionally **j**ump                            | `if T { RIP <- addr }`                                 |
 | `10010010` | R4W4    | `jal(addr:R4, target:R4)`          | **J**ump **a**nd **l**ink                             | `ret <- rip + 2; rip <- addr`                          |
 |            |         | hole                               |                                                       |                                                        |
-| `1010----` | I12E16  | `jali(ipoff:I28)`                  | **J**ump **a**nd **l**ink to **i**mmediate ±128M      | `ret <- rip + 2; rip <- rip + 2 + s32(ipoff)`          |
-| `1011----` | I12     | `c_ji(ipoff:I12)`                  | **C**onditionally **j**ump with IP-relative **i**mm.  | `if T { rip <- rip + 2 + s32(ipoff) }`                 |
+| `1010----` | I12E16  | `jali(ipoff:I28)`                  | **J**ump **a**nd **l**ink to **i**mmediate ±128M      | `ret <- rip + 2; rip <- rip + 2 + s32(ipoff << 1)`     |
+| `1011----` | I12     | `c_ji(ipoff:I12)`                  | **C**onditionally **j**ump with IP-relative **i**mm.  | `if T { rip <- rip + 2 + s32(ipoff << 1) }`            |
 |            |         |                                    | _**Arithmetic and bitwise logic**_                    |                                                        |
 | `11000000` | W4R4    | `bsext8(dst: W4, a:R4)`            | **S**ign-**ext**end from **8** to 32                  | `dst <- sign extend s8(a)`                             | 
 | `11000001` | W4R4    | `bsext16(dst: W4, a:R4)`           | **S**ign-**ext**end from **16** to 32                 | `dst <- sign extend s16(a)`                            |

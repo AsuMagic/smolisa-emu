@@ -3,32 +3,28 @@ from smol2.asm.assembler import *
 asm = Asm()
 
 asm.at(0x0000, [
-    # $bank = 0xFFFF
-    LIU(RG0, 0xFF),
-    LI(RG0, 0xFF),
-    OR(dst=RBANK, lhs=RG0, rhs=RG0),
+    liprel(rpl, "Literals"),
 
-    # $g0 = 0x2000
-    LIU(RG0, 0x20),
-    LI(RG0, 0x00),
-
-    # $g1 = 'a'
-    LI(RG1, ord('a')),
-
-    # mem[$g0] = $g1
-    SB(addr=RG0, src=RG1),
+    # *0xF0002000 <- 'a'
+    pl_l32(r0, 0),
+    lsi(r1, ord("a")),
+    s8(addr=r0, src=r1),
 
     Label("infvsync"),
-    # $g0 = 0x2FD0
-    LIU(RG0, 0x2F),
-    LI(RG0, 0xD0),
-
     # wait for vsync - written value does not matter
-    SB(addr=RG0, src=RG0),
+    pl_l32(r0, 4),
+    s8(addr=r0, src=r0),
+    jali("infvsync"),
+])
 
-    LIU(RG0, high("infvsync")),
-    LI(RG0, low("infvsync")),
-    OR(RIP, RG0, RG0)
+# TODO: add an Align() op
+asm.at(0x0100, [
+    Label("Literals"),
+    (0xF0002000).to_bytes(4, byteorder="little"), # [0]
+    (0xF0002FD0).to_bytes(4, byteorder="little"), # [1]
+
+    # Label("String"),
+    # "Hello, world!\0".encode("ascii")
 ])
 
 if __name__ == "__main__":

@@ -20,20 +20,24 @@ struct RegisterFile
 
 struct Core
 {
-	RegisterFile       registers;
+	RegisterFile       regs;
 	std::optional<u32> current_instruction;
+	u32                rip = 0;
+	bool               t_bit = false;
 	Mmu                mmu;
 
 	std::size_t executed_ops = 0;
-	std::size_t cycles       = 0;
 
 	using Timer = std::chrono::high_resolution_clock;
 	Timer::time_point start_time;
 
 	std::function<void(Core&)> panic_handler;
+	std::function<void()> keepalive;
 
 	void dispatch();
 	void boot();
+
+	[[nodiscard]] auto check_access_or_fault(AccessStatus status) -> bool;
 
 	[[nodiscard]] auto debug_state_multiline() const -> std::string;
 	[[nodiscard]] auto debug_state() const -> std::string;

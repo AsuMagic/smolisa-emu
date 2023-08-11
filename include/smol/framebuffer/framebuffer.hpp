@@ -22,6 +22,7 @@ class FrameBuffer
 		FrameData,
 		PaletteData,
 		VsyncWait,
+		PresentIfTimePassed,
 		Invalid
 	};
 
@@ -33,8 +34,10 @@ class FrameBuffer
 
 	struct PaletteEntry
 	{
-		Byte r, g, b;
+		u8 r, g, b;
 	};
+
+	static constexpr Addr mmio_address = 0x2000;
 
 	static constexpr Addr pixel_data_address     = 0x0000;
 	static constexpr Addr pixel_data_end_address = 0x0F9F;
@@ -43,11 +46,15 @@ class FrameBuffer
 	static constexpr Addr palette_end_address = 0x0FCF;
 
 	static constexpr Addr vsync_wait_address = 0x0FD0;
+	static constexpr Addr present_address = 0x0FD1;
 
 	static constexpr std::size_t width = 80, height = 25;
 
 	static constexpr std::size_t sizeof_fb_char       = 2;
 	static constexpr std::size_t sizeof_palette_entry = 3;
+
+	static constexpr std::uint8_t alert_color = 0b0010'0001;
+	static constexpr std::uint8_t normal_color = 0b0000'0001;
 
 	auto get_char(std::size_t x, std::size_t y) const -> Char;
 
@@ -59,15 +66,16 @@ class FrameBuffer
 	void clear();
 	void rebuild();
 	auto display() -> bool;
+	auto should_present() -> bool;
 
 	void update_char(Char c, std::size_t x, std::size_t y);
 
-	void display_simple_string(std::string_view s, std::size_t origin_x, std::size_t origin_y);
+	void display_simple_string(std::string_view s, std::size_t origin_x, std::size_t origin_y, std::uint8_t color = alert_color);
 
 	static auto byte_region(Addr a) -> Region;
 
-	auto set_byte(Addr a, Byte b) -> bool;
-	auto get_byte(Addr a) const -> std::optional<Byte>;
+	auto set_byte(Addr a, u8 b) -> bool;
+	auto get_byte(Addr a) const -> std::optional<u8>;
 
 	private:
 	std::vector<char> m_character_data;
@@ -76,6 +84,9 @@ class FrameBuffer
 	sf::Image         m_font;
 
 	sf::RenderWindow m_window;
+	float            m_fps_target = 30;
+
+	sf::Clock m_frame_clock;
 
 	std::size_t m_glyph_width, m_glyph_height;
 };

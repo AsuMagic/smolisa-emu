@@ -83,8 +83,8 @@ auto Mmu::set_u16(Addr addr, u16 data) -> AccessStatus
 		return mmio_write_callback(mmio_address(addr), data, AccessGranularity::U16);
 	}
 
-	ram[addr] = data & 0xFF;
-	ram[addr + 1] = data >> 8;
+	ram[addr + 0] = (data >> 0) & 0xFF;
+	ram[addr + 1] = (data >> 8) & 0xFF;
 	return AccessStatus::Ok;
 }
 
@@ -110,7 +110,7 @@ auto Mmu::get_u32(Addr addr) const -> std::pair<AccessStatus, u32>
 
 	return {
 		AccessStatus::Ok,
-		ram[addr] | (ram[addr + 1] << 8) | (ram[addr + 2] << 12) | (ram[addr + 3] << 16)
+		ram[addr] | (ram[addr + 1] << 8) | (ram[addr + 2] << 16) | (ram[addr + 3] << 24)
 	};
 }
 
@@ -134,7 +134,7 @@ auto Mmu::set_u32(Addr addr, u32 data) -> AccessStatus
 
 	ram[addr + 0] = (data >> 0) & 0xFF;
 	ram[addr + 1] = (data >> 8) & 0xFF;
-	ram[addr + 2] = (data >> 12) & 0xFF;
-	ram[addr + 3] = (data >> 16) & 0xFF;
+	ram[addr + 2] = (data >> 16) & 0xFF;
+	ram[addr + 3] = (data >> 24) & 0xFF;
 	return AccessStatus::Ok;
 }

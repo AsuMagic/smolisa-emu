@@ -44,6 +44,8 @@ class Asm:
             return 0
         elif isinstance(token, Absolute):
             return 4
+        else:
+            assert False
 
     def resolve_patch(self, ins_address, imm):
         if isinstance(imm.value, Absolute):
@@ -97,7 +99,7 @@ class Asm:
         for seq_offset, seq in self.sequences:
             offset = seq_offset
 
-            for i, token in enumerate(seq):
+            for token in seq:
                 if isinstance(token, Label):
                     self.set_label(offset, token.name)
                 

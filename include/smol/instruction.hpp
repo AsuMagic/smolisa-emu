@@ -1,5 +1,6 @@
 #pragma once
 
+#include <smol/util.hpp>
 #include <smol/masks.hpp>
 #include <smol/registers.hpp>
 #include <smol/types.hpp>
@@ -7,22 +8,20 @@
 #include <array>
 #include <type_traits>
 #include <variant>
+#include <fmt/core.h>
 
 template<class T>
 auto sext(T x, std::size_t bit_count)
 {
-	// perform sign extension
-	x <<= sizeof(T) - bit_count;
-	auto out = std::make_signed_t<T>(x);
-	out >>= sizeof(T) - bit_count;
-	return out;
+	int mask = std::uint64_t(1) << (bit_count - 1);
+	return (x ^ mask) - mask;
 }
 
 template<class T>
 T bits(Instruction ins, std::size_t first_bit, std::size_t bit_count)
 {
-	const std::uint64_t mask = (1 << bit_count) - 1;
-	std::uint64_t extracted = (ins >> first_bit) & mask;
+	const std::uint64_t mask = (std::uint64_t(1) << bit_count) - 1;
+	std::uint64_t extracted = (std::uint64_t(ins) >> first_bit) & mask;
 
 	if constexpr (std::is_signed_v<T>)
 	{
@@ -134,7 +133,7 @@ template<bool Signed>
 void i28(Instruction ins, std::conditional_t<Signed, s32, u32>& imm)
 {
 	u32 unsigned_imm = 
-		bits<u32>(ins, 4, 12)
+		bits<u32>(ins, 0, 12)
 		| bits<u32>(ins, 16, 16) << 12;
 	imm = sext(unsigned_imm, 28);
 }
@@ -142,7 +141,7 @@ void i28(Instruction ins, std::conditional_t<Signed, s32, u32>& imm)
 template<bool Signed>
 void i12(Instruction ins, std::conditional_t<Signed, s32, u32>& imm)
 {
-	imm = bits<s32>(ins, 0, 12);
+	imm = sext(bits<u32>(ins, 0, 12), 12);
 }
 
 } // namespace decoders
@@ -263,14 +262,14 @@ struct JumpLinkReg
 
 struct JumpLinkI28
 {
-	s32 target;
-	explicit JumpLinkI28(Instruction ins) { decoders::i28<true>(ins, target); }
+	s32 relative_target;
+	explicit JumpLinkI28(Instruction ins) { decoders::i28<true>(ins, relative_target); }
 };
 
 struct JumpI12
 {
-	s32 target;
-	explicit JumpI12(Instruction ins) { decoders::i12<true>(ins, target); }
+	s32 relative_target;
+	explicit JumpI12(Instruction ins) { decoders::i12<true>(ins, relative_target); }
 };
 
 struct ALURegReg
@@ -722,12 +721,92 @@ using AnyInstruction = std::variant<
 	Unknown
 >;
 
-inline AnyInstruction decode(s32 insn)
+// TODO: move to own file cause lol
+inline std::string disassemble(const AnyInstruction& insn)
+{
+	constexpr static auto rn = register_name;
+
+	return std::visit(overloaded{
+		[&](L8 x) { return fmt::format("l8(addr={}, dst={})", rn(x.addr), rn(x.dst)); },
+		[&](L16 x) { return fmt::format("l16(addr={}, dst={})", rn(x.addr), rn(x.dst)); },
+		[&](L32 x) { return fmt::format("l32(addr={}, dst={})", rn(x.addr), rn(x.dst)); },
+		[&](CLR x) { return fmt::format("c_lr(src={}, dst={})", rn(x.src), rn(x.dst)); },
+		[&](L8OW x) { return fmt::format("l8ow(base={}, dst={}, offset={})", rn(x.base_addr), rn(x.dst), x.offset); },
+		[&](L16OW x) { return fmt::format("l16ow(base={}, dst={}, offset={})", rn(x.base_addr), rn(x.dst), x.offset << 1); },
+		[&](L32OW x) { return fmt::format("l32ow(base={}, dst={}, offset={})", rn(x.base_addr), rn(x.dst), x.offset << 2); },
+		[&](LR x) { return fmt::format("lr(src={}, dst={})", rn(x.src), rn(x.dst)); },
+		[&](auto) { return std::string("<unimplemented>"); },
+		[&](LS8 x) { return fmt::format("ls8(addr={}, dst={})", rn(x.addr), rn(x.dst)); },
+		[&](LS16 x) { return fmt::format("ls16(addr={}, dst={})", rn(x.addr), rn(x.dst)); },
+		[&](LS8OW x) { return fmt::format("ls8ow(base={}, dst={}, offset={})", rn(x.base_addr), rn(x.dst), x.offset); },
+		[&](LS16OW x) { return fmt::format("ls16ow(base={}, dst={}, offset={})", rn(x.base_addr), rn(x.dst), x.offset << 1); },
+		[&](L8O x) { return fmt::format("l8o(base={}, dst={}, offset={})", rn(x.base_addr), rn(x.dst), x.offset); },
+		[&](L16O x) { return fmt::format("l16o(base={}, dst={}, offset={})", rn(x.base_addr), rn(x.dst), x.offset << 1); },
+		[&](L32O x) { return fmt::format("l32o(base={}, dst={}, offset={})", rn(x.base_addr), rn(x.dst), x.offset << 2); },
+		[&](LS8O x) { return fmt::format("ls8o(base={}, dst={}, offset={})", rn(x.base_addr), rn(x.dst), x.offset); },
+		[&](LS16O x) { return fmt::format("ls16o(base={}, dst={}, offset={})", rn(x.base_addr), rn(x.dst), x.offset << 1); },
+		[&](LSI x) { return fmt::format("lsi(dst={}, imm={})", rn(x.dst), x.imm); },
+		[&](LSIH x) { return fmt::format("lsih(dst={}, imm={})", rn(x.dst), x.imm); },
+		[&](LSIW x) { return fmt::format("lsiw(dst={}, imm={})", rn(x.dst), x.imm); },
+		[&](LIPREL x) { return fmt::format("liprel(dst={}, imm={})", rn(x.dst), x.imm << 1); },
+		[&](S8 x) { return fmt::format("s8(addr={}, src={})", rn(x.addr), rn(x.src)); },
+		[&](S16 x) { return fmt::format("s16(addr={}, src={})", rn(x.addr), rn(x.src)); },
+		[&](S32 x) { return fmt::format("s32(addr={}, src={})", rn(x.addr), rn(x.src)); },
+		[&](PUSH x) { return fmt::format("s32(src={})", rn(x.src)); },
+		[&](S8OW x) { return fmt::format("s8ow(base={}, src={}, offset={})", rn(x.base_addr), rn(x.src), x.offset); },
+		[&](S16OW x) { return fmt::format("s16ow(base={}, src={}, offset={})", rn(x.base_addr), rn(x.src), x.offset << 1); },
+		[&](S32OW x) { return fmt::format("s32ow(base={}, src={}, offset={})", rn(x.base_addr), rn(x.src), x.offset << 2); },
+		[&](BRK x) { return fmt::format("brk()"); },
+		[&](S8O x) { return fmt::format("s8o(base={}, src={}, offset={})", rn(x.base_addr), rn(x.src), x.offset); },
+		[&](S16O x) { return fmt::format("s16o(base={}, src={}, offset={})", rn(x.base_addr), rn(x.src), x.offset << 1); },
+		[&](S32O x) { return fmt::format("s32o(base={}, src={}, offset={})", rn(x.base_addr), rn(x.src), x.offset << 2); },
+		[&](TLTU x) { return fmt::format("tltu(a={}, b={})", rn(x.a), rn(x.b)); },
+		[&](TLTS x) { return fmt::format("tlts(a={}, b={})", rn(x.a), rn(x.b)); },
+		[&](TGEU x) { return fmt::format("tgeu(a={}, b={})", rn(x.a), rn(x.b)); },
+		[&](TGES x) { return fmt::format("tges(a={}, b={})", rn(x.a), rn(x.b)); },
+		[&](TE x) { return fmt::format("te(a={}, b={})", rn(x.a), rn(x.b)); },
+		[&](TNE x) { return fmt::format("tne(a={}, b={})", rn(x.a), rn(x.b)); },
+		[&](TLTSI x) { return fmt::format("tltsi(a={}, b={})", rn(x.a), x.b); },
+		[&](TGESI x) { return fmt::format("tgesi(a={}, b={})", rn(x.a), x.b); },
+		[&](TEI x) { return fmt::format("tei(a={}, b={})", rn(x.a), x.b); },
+		[&](TNEI x) { return fmt::format("tnei(a={}, b={})", rn(x.a), x.b); },
+		[&](TBZ x) { return fmt::format("tltsi(a={})", rn(x.a)); },
+		[&](PLL32 x) { return fmt::format("pl_l32(dst={}, index={})", rn(x.dst), x.index); },
+		[&](J x) { return fmt::format("j(target={})", rn(x.target)); },
+		[&](CJ x) { return fmt::format("c_j(target={})", rn(x.target)); },
+		[&](JAL x) { return fmt::format("jal(target={}, dst={})", rn(x.target), rn(x.dst)); },
+		[&](JALI x) { return fmt::format("jali(target={})  # dst = rret", x.relative_target << 1); },
+		[&](CJI x) { return fmt::format("c_ji(target={})", x.relative_target << 1); },
+		[&](BSEXT8 x) { return fmt::format("bsext8(a_dst={}, b={})", rn(x.a_dst), rn(x.b)); },
+		[&](BSEXT16 x) { return fmt::format("bsext16(a_dst={}, b={})", rn(x.a_dst), rn(x.b)); },
+		[&](BZEXT8 x) { return fmt::format("bzext8(a_dst={}, b={})", rn(x.a_dst), rn(x.b)); },
+		[&](BZEXT16 x) { return fmt::format("bzext16(a_dst={}, b={})", rn(x.a_dst), rn(x.b)); },
+		[&](INEG x) { return fmt::format("ineg(dst={}, a={})", rn(x.a_dst), rn(x.b)); },
+		[&](ISUB x) { return fmt::format("idst(a_dst={}, b={})", rn(x.a_dst), rn(x.b)); },
+		[&](IADD x) { return fmt::format("iadd(a_dst={}, b={})", rn(x.a_dst), rn(x.b)); },
+		[&](IADDSI x) { return fmt::format("iaddsi(a_dst={}, b={})", rn(x.a_dst), x.b); },
+		[&](IADDSIW x) { return fmt::format("iaddsiw(dst={}, a={}, b={})", rn(x.dst), rn(x.a), x.b); },
+		[&](IADDSITNZ x) { return fmt::format("iaddsi_tnz(a_dst={}, b={})", rn(x.a_dst), x.b); },
+		[&](BAND x) { return fmt::format("band(a_dst={}, b={})", rn(x.a_dst), rn(x.b)); },
+		[&](BOR x) { return fmt::format("bor(a_dst={}, b={})", rn(x.a_dst), rn(x.b)); },
+		[&](BXOR x) { return fmt::format("bxor(a_dst={}, b={})", rn(x.a_dst), rn(x.b)); },
+		[&](BSL x) { return fmt::format("bsl(a_dst={}, b={})", rn(x.a_dst), rn(x.b)); },
+		[&](BSR x) { return fmt::format("bsr(a_dst={}, b={})", rn(x.a_dst), rn(x.b)); },
+		[&](BASR x) { return fmt::format("basr(a_dst={}, b={})", rn(x.a_dst), rn(x.b)); },
+		[&](BSLI x) { return fmt::format("bsli(a_dst={}, b={})", rn(x.a_dst), x.b); },
+		[&](BSRI x) { return fmt::format("bsri(a_dst={}, b={})", rn(x.a_dst), x.b); },
+		[&](BASRI x) { return fmt::format("basri(a_dst={}, b={})", rn(x.a_dst), x.b); },
+		[&](Unknown x) { return fmt::format("uint32_t({:#010x})", x.raw); },
+
+	}, insn);
+}
+
+inline AnyInstruction decode(u32 insn)
 {
 	const u32 o8 = (insn >> 8) & 0b1111'1111;
-	const u32 o7 = (insn >> 8) & 0b1111'1110;
-	const u32 o6 = (insn >> 8) & 0b1111'1100;
-	const u32 o4 = (insn >> 8) & 0b1111'0000;
+	const u32 o7 = o8 & 0b1111'1110;
+	const u32 o6 = o8 & 0b1111'1100;
+	const u32 o4 = o8 & 0b1111'0000;
 
 	if (o8 == 0b0000'0000) { return L8(insn); }
 	if (o8 == 0b0000'0001) { return L16(insn); }
@@ -778,25 +857,26 @@ inline AnyInstruction decode(s32 insn)
 	if (o8 == 0b1001'0010) { return JAL(insn); }
 	if (o4 == 0b1010'0000) { return JALI(insn); }
 	if (o4 == 0b1011'0000) { return CJI(insn); }
-	if (o4 == 0b1100'0000) { return BSEXT8(insn); }
-	if (o4 == 0b1100'0001) { return BSEXT16(insn); }
-	if (o4 == 0b1100'0010) { return BZEXT8(insn); }
-	if (o4 == 0b1100'0011) { return BZEXT16(insn); }
-	if (o4 == 0b1100'0100) { return INEG(insn); }
-	if (o4 == 0b1100'0101) { return ISUB(insn); }
-	if (o4 == 0b1100'0110) { return IADD(insn); }
-	if (o4 == 0b1100'0111) { return IADDSI(insn); }
-	if (o4 == 0b1100'1000) { return IADDSIW(insn); }
-	if (o4 == 0b1100'1001) { return IADDSITNZ(insn); }
-	if (o4 == 0b1100'1010) { return BAND(insn); }
-	if (o4 == 0b1100'1011) { return BOR(insn); }
-	if (o4 == 0b1100'1100) { return BXOR(insn); }
-	if (o4 == 0b1100'1101) { return BSL(insn); }
-	if (o4 == 0b1100'1110) { return BSR(insn); }
-	if (o4 == 0b1100'1111) { return BASR(insn); }
+	if (o8 == 0b1100'0000) { return BSEXT8(insn); }
+	if (o8 == 0b1100'0001) { return BSEXT16(insn); }
+	if (o8 == 0b1100'0010) { return BZEXT8(insn); }
+	if (o8 == 0b1100'0011) { return BZEXT16(insn); }
+	if (o8 == 0b1100'0100) { return INEG(insn); }
+	if (o8 == 0b1100'0101) { return ISUB(insn); }
+	if (o8 == 0b1100'0110) { return IADD(insn); }
+	if (o8 == 0b1100'0111) { return IADDSI(insn); }
+	if (o8 == 0b1100'1000) { return IADDSIW(insn); }
+	if (o8 == 0b1100'1001) { return IADDSITNZ(insn); }
+	if (o8 == 0b1100'1010) { return BAND(insn); }
+	if (o8 == 0b1100'1011) { return BOR(insn); }
+	if (o8 == 0b1100'1100) { return BXOR(insn); }
+	if (o8 == 0b1100'1101) { return BSL(insn); }
+	if (o8 == 0b1100'1110) { return BSR(insn); }
+	if (o8 == 0b1100'1111) { return BASR(insn); }
 	if (o7 == 0b1101'0000) { return BSLI(insn); }
 	if (o7 == 0b1101'0010) { return BSRI(insn); }
 	if (o7 == 0b1101'0100) { return BASRI(insn); }
+	return Unknown();
 }
 
 }
