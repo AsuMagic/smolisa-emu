@@ -1,8 +1,6 @@
 # smol2
 
-Assembler, emulator, documentation and demos for the smolisa architecture.
-
-NOTE: at this time, the README is outdated - the assembler has changed to a python implementation.
+Assembler, emulator, documentation and demos for the smol2 architecture.
 
 ## Quick start
 
