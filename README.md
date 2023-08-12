@@ -1,4 +1,4 @@
-# smolisa-tools
+# smol2
 
 Assembler, emulator, documentation and demos for the smolisa architecture.
 
@@ -6,7 +6,10 @@ NOTE: at this time, the README is outdated - the assembler has changed to a pyth
 
 ## Quick start
 
-- [Instruction set documentation](doc/cpu.md)
+- [CPU & ISA documentation](doc/cpu.md)
+- [Emulator source](src/)
+- [Assembler source](smol2/asm/)
+- [Assembly examples][smol2/examples/] (some outdated)
 
 ### Compiling (*nix)
 
@@ -18,15 +21,4 @@ mkdir build
 cd build
 cmake .. -DCMAKE_BUILD_TYPE=RELEASE
 make -j
-```
-
-### Video demo
-
-```sh
-# can be downloaded from e.g. https://marcan.st/transf/badapple.aa
-example-generate-video-stream ./assets/badapple.aa > ./assets/badapple.bin
-
-mkdir demos
-smolisa-as ./examples/video.s > ./demos/video.img
-smolisa-emu ./demos/video.img
 ```
