@@ -9,7 +9,7 @@ NOTE: at this time, the README is outdated - the assembler has changed to a pyth
 - [CPU & ISA documentation](doc/cpu.md)
 - [Emulator source](src/)
 - [Assembler source](smol2/asm/)
-- [Assembly examples][smol2/examples/] (some outdated)
+- [Assembly examples](smol2/examples/) (some outdated)
 
 ### Compiling (*nix)
 
