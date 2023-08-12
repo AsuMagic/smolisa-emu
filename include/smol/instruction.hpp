@@ -64,16 +64,16 @@ void r4r4e16(Instruction ins, RegisterId& a, RegisterId& b, std::conditional_t<S
 template<bool Signed>
 void rh2r2i6(Instruction ins, RegisterId& a, RegisterId& b, std::conditional_t<Signed, s32, u32>& imm)
 {
-	a = R(bits<u32>(ins, 0, 2) & 0xF);
-	b = R((bits<u32>(ins, 2, 4) & 0xF) | 0b1000);
+	a = R((bits<u32>(ins, 0, 2)) | 0b1000);
+	b = R(bits<u32>(ins, 2, 2));
 
 	if constexpr (Signed)
 	{
-		imm = bits<s32>(ins, 12, 6);
+		imm = bits<s32>(ins, 4, 6);
 	}
 	else
 	{
-		imm = bits<u32>(ins, 12, 6);
+		imm = bits<u32>(ins, 4, 6);
 	}
 }
 
@@ -244,8 +244,8 @@ struct TestReg
 struct PoolLoad
 {
 	R dst;
-	u32 index;
-	explicit PoolLoad(Instruction ins) { decoders::r4i8<false>(ins, dst, index); }
+	u32 offset;
+	explicit PoolLoad(Instruction ins) { decoders::r4i8<false>(ins, dst, offset); }
 };
 
 struct JumpReg
@@ -634,7 +634,7 @@ struct BSLI : formats::ALURegS5
 	using formats::ALURegS5::ALURegS5;
 };
 
-struct BSRI : formats::ALURegS5
+struct BSRITLSB : formats::ALURegS5
 {
 	using formats::ALURegS5::ALURegS5;
 };
@@ -716,7 +716,7 @@ using AnyInstruction = std::variant<
 	BSR,
 	BASR,
 	BSLI,
-	BSRI,
+	BSRITLSB,
 	BASRI,
 	Unknown
 >;
@@ -771,7 +771,7 @@ inline std::string disassemble(const AnyInstruction& insn)
 		[&](TEI x) { return fmt::format("tei(a={}, b={})", rn(x.a), x.b); },
 		[&](TNEI x) { return fmt::format("tnei(a={}, b={})", rn(x.a), x.b); },
 		[&](TBZ x) { return fmt::format("tltsi(a={})", rn(x.a)); },
-		[&](PLL32 x) { return fmt::format("pl_l32(dst={}, index={})", rn(x.dst), x.index); },
+		[&](PLL32 x) { return fmt::format("pl_l32(dst={}, offset={})", rn(x.dst), x.offset); },
 		[&](J x) { return fmt::format("j(target={})", rn(x.target)); },
 		[&](CJ x) { return fmt::format("c_j(target={})", rn(x.target)); },
 		[&](JAL x) { return fmt::format("jal(target={}, dst={})", rn(x.target), rn(x.dst)); },
@@ -794,7 +794,7 @@ inline std::string disassemble(const AnyInstruction& insn)
 		[&](BSR x) { return fmt::format("bsr(a_dst={}, b={})", rn(x.a_dst), rn(x.b)); },
 		[&](BASR x) { return fmt::format("basr(a_dst={}, b={})", rn(x.a_dst), rn(x.b)); },
 		[&](BSLI x) { return fmt::format("bsli(a_dst={}, b={})", rn(x.a_dst), x.b); },
-		[&](BSRI x) { return fmt::format("bsri(a_dst={}, b={})", rn(x.a_dst), x.b); },
+		[&](BSRITLSB x) { return fmt::format("bsri_tlsb(a_dst={}, b={})", rn(x.a_dst), x.b); },
 		[&](BASRI x) { return fmt::format("basri(a_dst={}, b={})", rn(x.a_dst), x.b); },
 		[&](Unknown x) { return fmt::format("uint32_t({:#010x})", x.raw); },
 
@@ -874,7 +874,7 @@ inline AnyInstruction decode(u32 insn)
 	if (o8 == 0b1100'1110) { return BSR(insn); }
 	if (o8 == 0b1100'1111) { return BASR(insn); }
 	if (o7 == 0b1101'0000) { return BSLI(insn); }
-	if (o7 == 0b1101'0010) { return BSRI(insn); }
+	if (o7 == 0b1101'0010) { return BSRITLSB(insn); }
 	if (o7 == 0b1101'0100) { return BASRI(insn); }
 	return Unknown();
 }

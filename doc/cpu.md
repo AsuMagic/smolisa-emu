@@ -168,7 +168,7 @@ The `T` bit is manipulated by certain arithmetic and test instructions.
 | `01111100` | R4I4    | `tei(a:R4, b:I4)`                  | **T**est if **e**qual to **i**mmediate                | `T <- (a == b)`                                        |
 | `01111101` | R4I4    | `tnei(a:R4, b:I4)`                 | **T**est if **n**ot **e**qual to **i**mmediate        | `T <- (a != b)`                                        |
 | `01111110` | R4      | `tbz(a:R4)`                        | **T**est if any **b**yte is **z**ero                  | TODO                                                   |
-| `01111111` |         | hole                               |                                                       |                                                        |
+| `01111111` |         |                                    |                                                       |                                                        |
 |            |         |                                    | _**Pool loads**_                                      |                                                        |
 | `1000----` | W4I8    | `pl_l32(dst:R4, imm:U8)`           | r**pl**: **L**oad u**32** from memory with off <=1K   | `dst <- mem32(rpl + (u32(imm) << 2))`                  |
 |            |         |                                    | _**Branching and conditional ops**_                   |                                                        |
@@ -196,8 +196,8 @@ The `T` bit is manipulated by certain arithmetic and test instructions.
 | `11001110` | A4R4    | `bsr(dst:A4, b:R4)`                | Bitwise **s**hift **r**ight (pads `0`s)               | `dst <- dst >> b[:5]`                                  |
 | `11001111` | A4R4    | `basr(dst:A4, b:R4)`               | Integer **a**rith. **s**hift **r**ight (pads sign)    | `dst <- dst >>> b[:5]`                                 |
 | `1101000-` | A4I5    | `bsli(dst:A4, b:I5)`               | Bitwise **s**hift **l**eft with **i**mmediate         | `dst <- dst << b`                                      |
-| `1101001-` | A4I5    | `bsri(dst:A4, b:I5)`               | Bitwise **s**hift **r**ight with **i**mmediate        | `dst <- dst >> b`                                      |
-| `1101010-` | A4I5    | `basri(dst:A4, b:I5)`              | Integer **a**rith. **s**hift **r**ight with **i**mm.  | `dst <- dst >>> b`                                     |
+| `1101001-` | A4I5    | `bsri_tlsb((dst:A4, b:I5)`         | Bitwise **s**hift **r**ight with **i**mmediate        | `dst <- dst >> b; T <- (dst & 0b1) != 0`               |
+| `1101010-` | A4I5    | `basridst:A4, b:I5)`               | Integer **a**rith. **s**hift **r**ight with **i**mm.  | `dst <- dst >>> b`                                     |
 | `11010110` |         | hole                               |                                                       |                                                        |
 | `11010111` |         | hole                               |                                                       |                                                        |
 | `11011---` |         | hole                               |                                                       |                                                        |

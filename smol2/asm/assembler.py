@@ -4,6 +4,12 @@ from .register import *
 
 import sys
 
+def required_alignment(offset: int, to: int):
+    if offset % to == 0:
+        return 0
+
+    return to - offset % to
+
 class Asm:
     def __init__(self):
         self.sequences = []
@@ -27,15 +33,17 @@ class Asm:
 
         return self.labels[name]
 
-    def serialize_token(self, token):
+    def serialize_token(self, token, offset):
         if isinstance(token, Instruction):
             return token.as_bytes()
         elif isinstance(token, bytes):
             return token
+        elif isinstance(token, Align):
+            return bytes([0] * required_alignment(offset, token.to))
         else:
             assert False
 
-    def token_len(self, token):
+    def token_len(self, token, offset):
         if isinstance(token, Instruction):
             return len(token)
         elif isinstance(token, bytes):
@@ -44,6 +52,8 @@ class Asm:
             return 0
         elif isinstance(token, Absolute):
             return 4
+        elif isinstance(token, Align):
+            return required_alignment(offset, token.to)
         else:
             assert False
 
@@ -80,9 +90,9 @@ class Asm:
                 if isinstance(token, Absolute):
                     token = self.resolve_label(token.name).to_bytes(4, byteorder="little")
 
-                token_bytes = self.serialize_token(token)
+                token_bytes = self.serialize_token(token, offset)
                 assert token_bytes is not None, f"Erroneous token of type {type(token)}"
-                assert len(token_bytes) == self.token_len(token)
+                assert len(token_bytes) == self.token_len(token, offset)
 
                 if offset + len(token_bytes) > len(rom):
                     raise ValueError(f"ROM file too small for sequence of size {len(token_bytes)} at offset 0x{offset:04X}")
@@ -103,4 +113,4 @@ class Asm:
                 if isinstance(token, Label):
                     self.set_label(offset, token.name)
                 
-                offset += self.token_len(token)
+                offset += self.token_len(token, offset)

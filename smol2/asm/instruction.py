@@ -23,12 +23,16 @@ Relative = str
 class Absolute:
     name: str
 
+@dataclass
+class Align:
+    to: int
+
 def is_access_valid(reg: Reg, access_method: RegAccessMode) -> bool:
     if access_method == RegAccessMode.R2:
-        return 0b0000 <= reg.id <= 0b1111
+        return 0b0000 <= reg.id <= 0b0011
 
     if access_method == RegAccessMode.Rh2:
-        return 0b1000_0000 <= reg.id <= 0b1000_1111
+        return 0b1000 <= reg.id <= 0b1011
 
     return True
 
@@ -533,7 +537,7 @@ def basr(a_dst: Reg, b: Reg):
 def bsli(a_dst: Reg, b: int | Absolute):
     return InsR4I5(0b1101_0000, r=a_dst, imm=Immediate(b, False, 0))
 
-def bsri(a_dst: Reg, b: int | Absolute):
+def bsri_tlsb(a_dst: Reg, b: int | Absolute):
     return InsR4I5(0b1101_0010, r=a_dst, imm=Immediate(b, False, 0))
 
 def basri(a_dst: Reg, b: int | Absolute):

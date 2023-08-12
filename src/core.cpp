@@ -115,6 +115,22 @@ void Core::dispatch()
 			fmt::print("BRK called @{}\n", rip);
 			rip += 2;
 		},
+		[&](S8 x) {
+			const auto state = mmu.set_u8(regs[x.addr], regs[x.src]);
+
+			if (check_access_or_fault(state))
+			{
+				rip += 2;
+			}
+		},
+		[&](S8O x) {
+			const auto state = mmu.set_u8(regs[x.base_addr] + x.offset, regs[x.src]);
+
+			if (check_access_or_fault(state))
+			{
+				rip += 2;
+			}
+		},
 		[&](TLTU x) {
 			t_bit = regs[x.a] < regs[x.b];
 			rip += 2;
@@ -149,20 +165,12 @@ void Core::dispatch()
 			rip += 2;
 		},
 		[&](PLL32 x) {
-			const s32 computed_address = regs[RegisterId::RPL] + x.index * 4;
+			const s32 computed_address = regs[RegisterId::RPL] + x.offset * 4;
 			const auto [state, value] = mmu.get_u32(computed_address);
 
 			if (check_access_or_fault(state))
 			{
 				regs[x.dst] = value;
-				rip += 2;
-			}
-		},
-		[&](S8 x) {
-			const auto state = mmu.set_u8(regs[x.addr], regs[x.src]);
-
-			if (check_access_or_fault(state))
-			{
 				rip += 2;
 			}
 		},
@@ -223,8 +231,9 @@ void Core::dispatch()
 			regs[x.a_dst] <<= x.b;
 			rip += 2;
 		},
-		[&](BSRI x) {
+		[&](BSRITLSB x) {
 			regs[x.a_dst] >>= x.b;
+			t_bit = (regs[x.a_dst] & 0b1) != 0;
 			rip += 2;
 		},
 		[&](BASRI x) {
