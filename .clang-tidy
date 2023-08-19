@@ -1,2 +1,2 @@
-Checks: '-*,bugprone-*,cert-*,cppcoreguidelines-*,clang-analyzer-*,hicpp-*,modernize-*,performance-*,portability-*,readability-*'
+Checks: '-*,bugprone-*,cert-*,cppcoreguidelines-*,clang-analyzer-*,hicpp-*,modernize-*,performance-*,portability-*,readability-*,-hicpp-signed-bitwise,-readability-identifier-length,-cppcoreguidelines-avoid-magic-numbers,-readability-magic-numbers,-readability-convert-member-functions-to-static'
 HeaderFilterRegex: 'include/*'

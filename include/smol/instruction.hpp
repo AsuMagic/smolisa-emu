@@ -155,12 +155,14 @@ struct MemLoad
 {
 	R addr, dst;
 	explicit MemLoad(Instruction ins) { decoders::r4r4(ins, addr, dst); }
+	static constexpr std::size_t length = 2;
 };
 
 struct RegLoad
 {
 	R src, dst;
 	explicit RegLoad(Instruction ins) { decoders::r4r4(ins, src, dst); }
+	static constexpr std::size_t length = 2;
 };
 
 struct MemLoadWideOffset
@@ -168,6 +170,7 @@ struct MemLoadWideOffset
 	R base_addr, dst;
 	s32 offset;
 	explicit MemLoadWideOffset(Instruction ins) { decoders::r4r4e16<true>(ins, base_addr, dst, offset); }
+	static constexpr std::size_t length = 4;
 };
 
 struct MemLoadShortOffset
@@ -175,6 +178,7 @@ struct MemLoadShortOffset
 	R base_addr, dst;
 	u32 offset;
 	explicit MemLoadShortOffset(Instruction ins) { decoders::rh2r2i6<false>(ins, base_addr, dst, offset); }
+	static constexpr std::size_t length = 2;
 };
 
 struct ImmByteLoad
@@ -182,6 +186,7 @@ struct ImmByteLoad
 	R dst;
 	s32 imm;
 	explicit ImmByteLoad(Instruction ins) { decoders::r4i8<true>(ins, dst, imm); }
+	static constexpr std::size_t length = 2;
 };
 
 struct ImmI24Load
@@ -189,12 +194,14 @@ struct ImmI24Load
 	R dst;
 	s32 imm;
 	explicit ImmI24Load(Instruction ins) { decoders::r4i8e16<true>(ins, dst, imm); }
+	static constexpr std::size_t length = 4;
 };
 
 struct MemStore
 {
 	R addr, src;
 	explicit MemStore(Instruction ins) { decoders::r4r4(ins, addr, src); }
+	static constexpr std::size_t length = 2;
 };
 
 struct MemStoreWideOffset
@@ -202,6 +209,7 @@ struct MemStoreWideOffset
 	R base_addr, src;
 	s32 offset;
 	explicit MemStoreWideOffset(Instruction ins) { decoders::r4r4e16<true>(ins, base_addr, src, offset); }
+	static constexpr std::size_t length = 4;
 };
 
 struct MemStoreShortOffset
@@ -209,23 +217,27 @@ struct MemStoreShortOffset
 	R base_addr, src;
 	u32 offset;
 	explicit MemStoreShortOffset(Instruction ins) { decoders::rh2r2i6<false>(ins, base_addr, src, offset); }
+	static constexpr std::size_t length = 2;
 };
 
 struct StackPush
 {
 	R src;
 	explicit StackPush(Instruction ins) { decoders::r4(ins, src); }
+	static constexpr std::size_t length = 2;
 };
 
 struct NoArg
 {
 	explicit NoArg(Instruction _ins) {}
+	static constexpr std::size_t length = 2;
 };
 
 struct TestRegReg
 {
 	R a, b;
 	explicit TestRegReg(Instruction ins) { decoders::r4r4(ins, a, b); }
+	static constexpr std::size_t length = 2;
 };
 
 struct TestRegI4
@@ -233,12 +245,14 @@ struct TestRegI4
 	R a;
 	s32 b;
 	explicit TestRegI4(Instruction ins) { decoders::r4i4<true>(ins, a, b); }
+	static constexpr std::size_t length = 2;
 };
 
 struct TestReg
 {
 	R a;
 	explicit TestReg(Instruction ins) { decoders::r4(ins, a); }
+	static constexpr std::size_t length = 2;
 };
 
 struct PoolLoad
@@ -246,36 +260,42 @@ struct PoolLoad
 	R dst;
 	u32 offset;
 	explicit PoolLoad(Instruction ins) { decoders::r4i8<false>(ins, dst, offset); }
+	static constexpr std::size_t length = 2;
 };
 
 struct JumpReg
 {
 	R target;
 	explicit JumpReg(Instruction ins) { decoders::r4(ins, target); }
+	static constexpr std::size_t length = 2;
 };
 
 struct JumpLinkReg
 {
 	R target, dst;
 	explicit JumpLinkReg(Instruction ins) { decoders::r4r4(ins, target, dst); }
+	static constexpr std::size_t length = 2;
 };
 
 struct JumpLinkI28
 {
 	s32 relative_target;
 	explicit JumpLinkI28(Instruction ins) { decoders::i28<true>(ins, relative_target); }
+	static constexpr std::size_t length = 4;
 };
 
 struct JumpI12
 {
 	s32 relative_target;
 	explicit JumpI12(Instruction ins) { decoders::i12<true>(ins, relative_target); }
+	static constexpr std::size_t length = 2;
 };
 
 struct ALURegReg
 {
 	R a_dst, b;
 	explicit ALURegReg(Instruction ins) { decoders::r4r4(ins, a_dst, b); }
+	static constexpr std::size_t length = 2;
 };
 
 struct ALURegS4
@@ -283,6 +303,7 @@ struct ALURegS4
 	R a_dst;
 	s32 b;
 	explicit ALURegS4(Instruction ins) { decoders::r4i4<true>(ins, a_dst, b); }
+	static constexpr std::size_t length = 2;
 };
 
 struct ALURegS5
@@ -290,6 +311,7 @@ struct ALURegS5
 	R a_dst;
 	s32 b;
 	explicit ALURegS5(Instruction ins) { decoders::r4i5<true>(ins, a_dst, b); }
+	static constexpr std::size_t length = 2;
 };
 
 struct ALUWideAdd
@@ -297,6 +319,7 @@ struct ALUWideAdd
 	R dst, a;
 	s32 b;
 	explicit ALUWideAdd(Instruction ins) { decoders::r4r4e16<true>(ins, dst, a, b); }
+	static constexpr std::size_t length = 4;
 };
 
 } // namespace formats
@@ -667,6 +690,7 @@ struct INTWAIT : formats::NoArg
 struct Unknown
 {
 	Instruction raw;
+	static constexpr std::size_t length = 2;
 };
 
 using AnyInstruction = std::variant<

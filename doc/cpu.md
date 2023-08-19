@@ -197,7 +197,7 @@ The `T` bit is manipulated by certain arithmetic and test instructions.
 | `11001111` | A4R4    | `basr(dst:A4, b:R4)`               | Integer **a**rith. **s**hift **r**ight (pads sign)    | `dst <- dst >>> b[:5]`                                 |
 | `1101000-` | A4I5    | `bsli(dst:A4, b:I5)`               | Bitwise **s**hift **l**eft with **i**mmediate         | `dst <- dst << b`                                      |
 | `1101001-` | A4I5    | `bsri_tlsb((dst:A4, b:I5)`         | Bitwise **s**hift **r**ight with **i**mmediate        | `dst <- dst >> b; T <- (dst & 0b1) != 0`               |
-| `1101010-` | A4I5    | `basridst:A4, b:I5)`               | Integer **a**rith. **s**hift **r**ight with **i**mm.  | `dst <- dst >>> b`                                     |
+| `1101010-` | A4I5    | `basri(dst:A4, b:I5)`              | Integer **a**rith. **s**hift **r**ight with **i**mm.  | `dst <- dst >>> b`                                     |
 | `11010110` |         | hole                               |                                                       |                                                        |
 | `11010111` |         | hole                               |                                                       |                                                        |
 | `11011---` |         | hole                               |                                                       |                                                        |
@@ -297,7 +297,8 @@ TODO
 | ID     | Description                                 |
 |--------|---------------------------------------------|
 | `0x0`  | Processor exception                         |
-| `0xD`  | Timer interrupt                             |
+| `0xC`  | Timer interrupt                             |
+| `0xD`  | Sound buffer empty event                    |
 | `0xE`  | Keyboard event                              |
 | `0xF`  | Framebuffer event (vsync)                   |
 

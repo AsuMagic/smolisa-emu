@@ -8,267 +8,241 @@
 #include <fmt/core.h>
 #include <iostream>
 #include <stdexcept>
+#include <type_traits>
 
-void Core::dispatch()
+auto Core::fetch_instruction_u32() -> std::optional<u32>
 {
-	using namespace insns;
+	u16 lower_word = 0;
+	u16 upper_word = 0;
+
+	// we perform two separate fetches here because we allow an alignment of %2.
+	//
+	// ideally we would only check on the second word when required, but taking
+	// this shortcut simplifies things and doesn't cause issues unless we run
+	// into some odd edge cases (e.g. executing at the last word of a page).
+	// so we might need to change this behavior later on
 
 	{
-		auto [fetch_state, first_word] = mmu.get_u16(rip);
+		AccessStatus fetch_state{};
+		std::tie(fetch_state, lower_word) = mmu.get_u16(rip);
 
 		if (fetch_state != AccessStatus::Ok) [[unlikely]]
 		{
 			fire_exception("Opcode fetch failed (u16 #1)");
-			return;
+			return std::nullopt;
 		}
-
-		current_instruction = first_word;
 	}
 
 	{
-		auto [fetch_state, second_word] = mmu.get_u16(rip + 2);
+		AccessStatus fetch_state{};
+		std::tie(fetch_state, upper_word) = mmu.get_u16(rip + 2);
 
 		if (fetch_state != AccessStatus::Ok) [[unlikely]]
 		{
 			fire_exception("Opcode fetch failed (u16 #2)");
-			return;
+			return std::nullopt;
 		}
+	}
 
-		*current_instruction |= second_word << 16;
+	return lower_word | (upper_word << 16U);
+}
+
+void Core::execute_single()
+{
+	using namespace insns;
+
+	current_instruction = fetch_instruction_u32();
+
+	if (!current_instruction.has_value())
+	{
+		// fault has occurred; next execute_single will hit the fault handler
+		return;
 	}
 
 	const auto decoded_ins = insns::decode(*current_instruction);
-	// fmt::print("{}| {}\n", debug_state(), disassemble(decoded_ins));
 
-	std::visit(overloaded{
-		[&](L8 x) {
-			const auto [state, value] = mmu.get_u8(regs[x.addr]);
+	if (verbose_exec)
+	{
+		fmt::print("{}| {}\n", debug_state(), disassemble(decoded_ins));
+	}
 
-			if (check_access_or_fault(state))
-			{
-				regs[x.dst] = value;
-				rip += 2;
-			}
-		},
-		[&](L16 x) {
-			const auto [state, value] = mmu.get_u16(regs[x.addr]);
+	const auto instruction_width = std::visit([&](auto x) { return x.length; }, decoded_ins);
+	next_rip                     = rip + instruction_width;
 
-			if (check_access_or_fault(state))
-			{
-				regs[x.dst] = value;
-				rip += 2;
-			}
-		},
-		[&](L32 x) {
-			const auto [state, value] = mmu.get_u32(regs[x.addr]);
+	const auto check_load = [this](auto fetched, Word& dst, bool sext = false) {
+		auto [state, value] = fetched;
 
-			if (check_access_or_fault(state))
-			{
-				regs[x.dst] = value;
-				rip += 2;
-			}
-		},
+		if (!check_access_else_fault(state))
+		{
+			return;
+		}
+
+		if (sext)
+		{
+			value = std::make_signed_t<decltype(value)>(value);
+			dst   = s32(value);
+		}
+		else
+		{
+			dst = value;
+		}
+	};
+
+	const auto check_store = [this](auto state) {
+		check_access_else_fault(state);
+	};
+
+	static const auto handle_op = overloaded{
+		[&](L8 x) { check_load(mmu.get_u8(regs[x.addr]), regs[x.dst]); },
+		[&](L16 x) { check_load(mmu.get_u16(regs[x.addr]), regs[x.dst]); },
+		[&](L32 x) { check_load(mmu.get_u32(regs[x.addr]), regs[x.dst]); },
+
 		[&](CLR x) {
 			if (t_bit)
 			{
 				regs[x.dst] = regs[x.src];
 			}
-			rip += 2;
 		},
-		// TODO: l8ow l16ow l32ow
-		[&](LR x) {
-			regs[x.dst] = regs[x.src];
-			rip += 2;
-		},
-		[&](LS8 x) {
-			const auto [state, value] = mmu.get_u8(regs[x.addr]);
 
-			if (check_access_or_fault(state))
-			{
-				regs[x.dst] = s32(s8(value));
-				rip += 2;
-			}
-		},
-		[&](LS16 x) {
-			const auto [state, value] = mmu.get_u16(regs[x.addr]);
+		[&](L8OW x) { check_load(mmu.get_u8(regs[x.base_addr] + x.offset), regs[x.dst]); },
+		[&](L16OW x) { check_load(mmu.get_u16(regs[x.base_addr] + (x.offset << 1)), regs[x.dst]); },
+		[&](L32OW x) { check_load(mmu.get_u32(regs[x.base_addr] + (x.offset << 2)), regs[x.dst]); },
 
-			if (check_access_or_fault(state))
-			{
-				regs[x.dst] = s32(s16(value));
-				rip += 2;
-			}
-		},
-		// TODO: ls8ow, ls16ow, l8o, l16o, l32o, ls8o, ls16o
-		[&](LSI x) {
-			regs[x.dst] = x.imm;
-			rip += 2;
-		},
-		[&](LSIW x) {
-			regs[x.dst] = x.imm;
-			rip += 4;
-		},
-		[&](LIPREL x) {
-			regs[x.dst] = rip + 2 + (x.imm << 1);
-			rip += 4;
-		},
-		[&](BRK x) {
-			fmt::print("BRK called @{}\n", rip);
-			rip += 2;
-		},
-		[&](S8 x) {
-			const auto state = mmu.set_u8(regs[x.addr], regs[x.src]);
+		[&](LR x) { regs[x.dst] = regs[x.src]; },
 
-			if (check_access_or_fault(state))
-			{
-				rip += 2;
-			}
-		},
-		[&](S8O x) {
-			const auto state = mmu.set_u8(regs[x.base_addr] + x.offset, regs[x.src]);
+		[&](LS8 x) { check_load(mmu.get_u8(regs[x.addr]), regs[x.dst], true); },
+		[&](LS16 x) { check_load(mmu.get_u16(regs[x.addr]), regs[x.dst], true); },
 
-			if (check_access_or_fault(state))
-			{
-				rip += 2;
-			}
-		},
-		[&](TLTU x) {
-			t_bit = regs[x.a] < regs[x.b];
-			rip += 2;
-		},
-		[&](TLTS x) {
-			t_bit = s32(regs[x.a]) < s32(regs[x.b]);
-			rip += 2;
-		},
-		[&](TGEU x) {
-			t_bit = regs[x.a] >= regs[x.b];
-			rip += 2;
-		},
-		[&](TGES x) {
-			t_bit = s32(regs[x.a]) >= s32(regs[x.b]);
-			rip += 2;
-		},
-		[&](TE x) {
-			t_bit = regs[x.a] == regs[x.b];
-			rip += 2;
-		},
-		[&](TNE x) {
-			t_bit = regs[x.a] != regs[x.b];
-			rip += 2;
-		},
-		// TODO: tltsi, tgesi, tbz
-		[&](TEI x) {
-			t_bit = regs[x.a] == x.b;
-			rip += 2;
-		},
-		[&](TNEI x) {
-			t_bit = regs[x.a] != x.b;
-			rip += 2;
-		},
-		[&](PLL32 x) {
-			const s32 computed_address = regs[RegisterId::RPL] + x.offset * 4;
-			const auto [state, value] = mmu.get_u32(computed_address);
+		[&](LS8OW x) { check_load(mmu.get_u8(regs[x.base_addr] + x.offset), regs[x.dst], true); },
+		[&](LS16OW x) { check_load(mmu.get_u16(regs[x.base_addr] + (x.offset << 1)), regs[x.dst], true); },
 
-			if (check_access_or_fault(state))
-			{
-				regs[x.dst] = value;
-				rip += 2;
-			}
+		[&](L8O x) { check_load(mmu.get_u8(regs[x.base_addr] + x.offset), regs[x.dst]); },
+		[&](L16O x) { check_load(mmu.get_u16(regs[x.base_addr] + (x.offset << 1)), regs[x.dst]); },
+		[&](L32O x) { check_load(mmu.get_u32(regs[x.base_addr] + (x.offset << 2)), regs[x.dst]); },
+
+		[&](LS8O x) { check_load(mmu.get_u8(regs[x.base_addr] + x.offset), regs[x.dst], true); },
+		[&](LS16O x) { check_load(mmu.get_u16(regs[x.base_addr] + (x.offset << 1)), regs[x.dst], true); },
+
+		[&](LSI x) { regs[x.dst] = x.imm; },
+		[&](LSIH x) { regs[x.dst] = (regs[x.dst] & 0x00FF'FFFFU) | (x.imm << 24); },
+		[&](LSIW x) { regs[x.dst] = x.imm; },
+
+		[&](LIPREL x) { regs[x.dst] = rip + 2 + (x.imm << 1); },
+
+		[&](S8 x) { check_store(mmu.set_u8(regs[x.addr], regs[x.src])); },
+		[&](S16 x) { check_store(mmu.set_u16(regs[x.addr], regs[x.src])); },
+		[&](S32 x) { check_store(mmu.set_u32(regs[x.addr], regs[x.src])); },
+
+		[&](PUSH x) {
+			regs[RegisterId::RPS] -= 4;
+			check_store(mmu.set_u32(regs[RegisterId::RPS], regs[x.src]));
 		},
-		[&](J x) {
-			rip = regs[x.target];
+
+		[&](S8OW x) { check_store(mmu.set_u8(regs[x.base_addr] + x.offset, regs[x.src])); },
+		[&](S16OW x) { check_store(mmu.set_u16(regs[x.base_addr] + (x.offset << 1), regs[x.src])); },
+		[&](S32OW x) { check_store(mmu.set_u32(regs[x.base_addr] + (x.offset << 2), regs[x.src])); },
+
+		[&](S8O x) { check_store(mmu.set_u8(regs[x.base_addr] + x.offset, regs[x.src])); },
+		[&](S16O x) { check_store(mmu.set_u16(regs[x.base_addr] + (x.offset << 1), regs[x.src])); },
+		[&](S32O x) { check_store(mmu.set_u32(regs[x.base_addr] + (x.offset << 2), regs[x.src])); },
+
+		[&](BRK x) { fmt::print("BRK called @{}\n", rip); },
+
+		[&](TLTU x) { t_bit = regs[x.a] < regs[x.b]; },
+		[&](TLTS x) { t_bit = s32(regs[x.a]) < s32(regs[x.b]); },
+		[&](TGEU x) { t_bit = regs[x.a] >= regs[x.b]; },
+		[&](TGES x) { t_bit = s32(regs[x.a]) >= s32(regs[x.b]); },
+		[&](TE x) { t_bit = regs[x.a] == regs[x.b]; },
+		[&](TNE x) { t_bit = regs[x.a] != regs[x.b]; },
+		[&](TLTSI x) { t_bit = s32(regs[x.a]) < s32(x.b); },
+		[&](TGESI x) { t_bit = s32(regs[x.a]) >= s32(x.b); },
+		[&](TBZ x) {
+			const auto v = regs[x.a]; 
+			t_bit = (
+				((v & 0x00'00'00'FF) == 0) ||
+				((v & 0x00'00'FF'00) == 0) ||
+				((v & 0x00'FF'00'00) == 0) ||
+				((v & 0xFF'00'00'00) == 0)
+			);
 		},
+		[&](TEI x) { t_bit = regs[x.a] == x.b; },
+		[&](TNEI x) { t_bit = regs[x.a] != x.b; },
+
+		[&](PLL32 x) { check_load(mmu.get_u32(regs[RegisterId::RPL] + (x.offset << 2)), regs[x.dst]); },
+
+		[&](J x) { next_rip = regs[x.target]; },
 		[&](CJ x) {
 			if (t_bit)
 			{
-				rip = regs[x.target];
-			}
-			else
-			{
-				rip += 2;
+				next_rip = regs[x.target];
 			}
 		},
 		[&](JAL x) {
 			regs[x.dst] = rip + 2;
-			rip = regs[x.target];
+			next_rip    = regs[x.target];
 		},
 		[&](JALI x) {
 			regs[RegisterId::RRET] = rip + 2;
-			rip = rip + 2 + (x.relative_target << 1);
+			next_rip               = rip + 2 + (x.relative_target << 1);
 		},
 		[&](CJI x) {
 			if (t_bit)
 			{
-				rip = rip + 2 + (x.relative_target << 1);
-			}
-			else
-			{
-				rip += 2;
+				next_rip = rip + 2 + (x.relative_target << 1);
 			}
 		},
-		[&](IADD x) {
-			regs[x.a_dst] += regs[x.b];
-			rip += 2;
-		},
-		[&](IADDSI x) {
-			regs[x.a_dst] = s32(regs[x.a_dst]) + x.b;
-			rip += 2;
-		},
-		[&](IADDSIW x) {
-			regs[x.dst] = s32(regs[x.a]) + x.b;
-			rip += 4;
-		},
+
+		[&](BSEXT8 x) { regs[x.a_dst] = s32(s8(regs[x.b])); },
+		[&](BSEXT16 x) { regs[x.a_dst] = s32(s16(regs[x.b])); },
+		[&](BZEXT8 x) { regs[x.a_dst] = u8(regs[x.b]); },
+		[&](BZEXT16 x) { regs[x.a_dst] = u16(regs[x.b]); },
+
+		[&](INEG x) { regs[x.a_dst] = -regs[x.b]; },
+		[&](ISUB x) { regs[x.a_dst] -= regs[x.b]; },
+		[&](IADD x) { regs[x.a_dst] += regs[x.b]; },
+		[&](IADDSI x) { regs[x.a_dst] = s32(regs[x.a_dst]) + x.b; },
+		[&](IADDSIW x) { regs[x.dst] = s32(regs[x.a]) + x.b; },
 		[&](IADDSITNZ x) {
 			const auto sum = s32(regs[x.a_dst]) + x.b;
-			regs[x.a_dst] = sum;
-			t_bit = (sum != 0);
-			rip += 2;
+			regs[x.a_dst]  = sum;
+			t_bit          = (sum != 0);
 		},
-		[&](BAND x) {
-			regs[x.a_dst] &= regs[x.b];
-			rip += 2;
-		},
-		[&](BSLI x) {
-			regs[x.a_dst] <<= x.b;
-			rip += 2;
-		},
+
+		[&](BAND x) { regs[x.a_dst] &= regs[x.b]; },
+		[&](BOR x) { regs[x.a_dst] |= regs[x.b]; },
+		[&](BXOR x) { regs[x.a_dst] ^= regs[x.b]; },
+		[&](BSL x) { regs[x.a_dst] <<= regs[x.b]; },
+		[&](BSR x) { regs[x.a_dst] >>= regs[x.b]; },
+		[&](BASR x) { regs[x.a_dst] = s32(regs[x.a_dst]) >> regs[x.b]; },
+		[&](BSLI x) { regs[x.a_dst] <<= x.b; },
 		[&](BSRITLSB x) {
 			regs[x.a_dst] >>= x.b;
 			t_bit = (regs[x.a_dst] & 0b1) != 0;
-			rip += 2;
 		},
-		[&](BASRI x) {
-			regs[x.a_dst] = s32(regs[x.a_dst]) >> x.b;
-			rip += 2;
-		},
-		[&](INTOFF x) {
-			interrupts.enabled = false;
-			rip += 2;
-		},
-		[&](INTON x) {
-			interrupts.enabled = true;
-			rip += 2;
-		},
+		[&](BASRI x) { regs[x.a_dst] = s32(regs[x.a_dst]) >> x.b; },
+
+		[&](INTOFF x) { interrupts.enabled = false; },
+		[&](INTON x) { interrupts.enabled = true; },
 		[&](INTRET x) {
 			interrupts.enabled = true;
-			rip = interrupts.intret;
-			rip += 2;
+			rip                = interrupts.intret;
 		},
 		[&](INTWAIT x) {
 			if (!interrupts.enabled)
 			{
-				throw std::runtime_error{
-					"Core waiting for interrupt but interrupts are disabled"
-				};
+				throw std::runtime_error{"Core waiting for interrupt but interrupts are disabled"};
 			}
 
 			throw std::runtime_error{"Waiting for interrupts unimplemented"};
-			rip += 2;
 		},
-		[&](Unknown) { fire_exception("Illegal instruction"); },
-		[&](auto op) { fire_exception("Unimplemented instruction"); },
-	}, decoded_ins);
 
-	// std::cout << debug_state() << '\n';
+		[&](Unknown) { fire_exception("Illegal instruction"); },
+
+		// [&](auto) { fire_exception("Unimplemented instruction"); },
+	};
+
+	std::visit(handle_op, decoded_ins);
+	rip = next_rip;
 
 	++executed_ops;
 }
@@ -283,20 +257,15 @@ void Core::boot()
 	for (;;)
 	{
 		current_instruction.reset();
-		dispatch();
+		execute_single();
 
 		if (executed_ops % 10000000 == 0)
 		{
 			const auto time_elapsed = std::chrono::duration<float>(Timer::now() - start_time).count();
 
-			const float avg_mhz = (1.0e-6f * float(executed_ops)) / time_elapsed;
+			const float avg_mhz = (1.0e-6F * float(executed_ops)) / time_elapsed;
 
-			fmt::print(
-				"{:.3f}s: {:9} ins, avg MHz {:.3f}\n",
-				time_elapsed,
-				executed_ops,
-				avg_mhz
-			);
+			fmt::print("{:.3f}s: {:9} ins, avg MHz {:.3f}\n", time_elapsed, executed_ops, avg_mhz);
 		}
 
 		if (executed_ops % 10000 == 0)
@@ -317,7 +286,7 @@ auto Core::fire_interrupt(Word id) -> bool
 	}
 
 	interrupts.enabled = false;
-	interrupts.intret = rip;
+	interrupts.intret  = rip;
 
 	// TODO: magic constants begone
 	const Word address = (0x00001000 + id * 16);
@@ -331,16 +300,13 @@ void Core::fire_exception(std::string_view reason)
 {
 	if (!fire_interrupt(0)) [[unlikely]]
 	{
-		throw std::runtime_error{
-			fmt::format(
-				"{} (interrupts disabled)",
-				reason
-			)
-		};
+		throw std::runtime_error{fmt::format("{} (interrupts disabled)", reason)};
 	}
+
+	next_rip = rip;
 }
 
-auto Core::check_access_or_fault(AccessStatus status) -> bool
+auto Core::check_access_else_fault(AccessStatus status) -> bool
 {
 	if (status == AccessStatus::Ok)
 	{
@@ -348,6 +314,7 @@ auto Core::check_access_or_fault(AccessStatus status) -> bool
 	}
 
 	fire_exception(access_status_strings.at(int(status)));
+	return false;
 }
 
 auto Core::debug_state_multiline() const -> std::string
@@ -396,7 +363,7 @@ auto Core::debug_state() const -> std::string
 	return ret;
 }
 
-std::string Core::debug_state_preamble() const
+auto Core::debug_state_preamble() const -> std::string
 {
 	std::string ret;
 

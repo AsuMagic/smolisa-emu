@@ -29,9 +29,11 @@ struct Core
 	RegisterFile       regs;
 	std::optional<u32> current_instruction;
 	u32                rip = 0;
+	u32                next_rip = 0;
 	bool               t_bit = false;
 	Mmu                mmu;
 	InterruptState     interrupts = {};
+	bool               verbose_exec = false;
 
 	std::size_t executed_ops = 0;
 
@@ -41,13 +43,14 @@ struct Core
 	std::function<void(Core&)> panic_handler;
 	std::function<void()> keepalive;
 
-	void dispatch();
+	auto fetch_instruction_u32() -> std::optional<u32>;
+
+	void execute_single();
 	void boot();
 
-	bool fire_interrupt(Word id);
+	auto fire_interrupt(Word id) -> bool;
 	void fire_exception(std::string_view reason = "");
-
-	[[nodiscard]] auto check_access_or_fault(AccessStatus status) -> bool;
+	auto check_access_else_fault(AccessStatus status) -> bool;
 
 	[[nodiscard]] auto debug_state_multiline() const -> std::string;
 	[[nodiscard]] auto debug_state() const -> std::string;
