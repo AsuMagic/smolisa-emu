@@ -201,7 +201,10 @@ The `T` bit is manipulated by certain arithmetic and test instructions.
 | `11010110` |         | hole                               |                                                       |                                                        |
 | `11010111` |         | hole                               |                                                       |                                                        |
 | `11011---` |         | hole                               |                                                       |                                                        |
-| `1110----` |         | hole                               |                                                       |                                                        |
+| `11100000` |         | `intoff`                           | Set **int**errupts **off**                            | `rinton <- 1`                                          |
+| `11100001` |         | `inton`                            | Set **int**errupts **on**                             | `rinton <- 0`                                          |
+| `11100010` |         | `intret`                           | **Int**errupt handler return                          | `rip <- rintret; rinton <- 1`                          |
+| `11100011` |         | `intwait`                          | **Int**errupt **wait** (sleep until interrupt)        |                                                        |
 | `1111----` |         | hole                               |                                                       |                                                        |
 
 ### Opcode ranges
@@ -257,9 +260,14 @@ encodings would be otherwise equivalent.
 ## Memory layout
 
 - `0x00000000`..`0xEFFFFFFF`: RAM
+- `0xF0000000`..`0xF0000FFF`: Keyboard
 - `0xF0002000`..`0xF0002FFF`: Framebuffer
 
-### Framebuffer (`0xF0002000`)
+### Keyboard (`0xF0000000~0xF0000FFF`)
+
+TODO
+
+### Framebuffer (`0xF0002000~0xF0002FFF`)
 
 Enables paletted text rendering.
 
@@ -277,3 +285,54 @@ RgbColor bit layout:
 - 0..7: Red channel.
 - 8..15: Green channel.
 - 16..23: Blue channel.
+
+### Timers (`0xF0003000~0xF0003FFF`)
+
+TODO
+
+## Interrupt handling
+
+**16** interrupts are available.
+
+| ID     | Description                                 |
+|--------|---------------------------------------------|
+| `0x0`  | Processor exception                         |
+| `0xD`  | Timer interrupt                             |
+| `0xE`  | Keyboard event                              |
+| `0xF`  | Framebuffer event (vsync)                   |
+
+The CPU boots with interrupts disabled. The `inton` instruction will enable them
+and `intoff` will disable them.
+
+### ISRs
+
+When an interrupt is fired:
+
+- Interrupts are disabled
+- `rip` is saved to the special `rintret` register
+- The CPU jumps to `0x00001000 + interrupt_id * 16`
+
+The 16 bytes size of interrupt handlers leave <=8 instructions for software
+to save state and jump to a more complex handler or to early return.
+
+ISRs must return by using the `reti` instruction.  
+If an interrupt is pending right as `reti` is being executed, the
+CPU will immediately branch to the relevant ISR.  
+If no interrupt is pending, then `reti` will:
+
+- Jump the CPU to `rintret` (as set when the interrupt was fired)
+- Re-enable interrupts
+
+On its own, the interrupt mechanism does not affect the stack as pointed to by
+`rps`. However, the ABI requirements makes it legal for the ISR to push and pop
+from the stack as long as `rps` is back to its original value during the
+`intret`.
+
+At the moment, nested interrupts are unsupported. Re-enabling interrupts within
+the ISR is possible but the user code's `rret` value would be lost.
+
+### Exceptions
+
+Software exceptions are implemented in terms of interrupts and uses ID `0x0`.
+
+Currently, different exceptions cannot be differentiated by the system.

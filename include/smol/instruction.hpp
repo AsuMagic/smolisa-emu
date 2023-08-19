@@ -644,6 +644,26 @@ struct BASRI : formats::ALURegS5
 	using formats::ALURegS5::ALURegS5;
 };
 
+struct INTOFF : formats::NoArg
+{
+	using formats::NoArg::NoArg;
+};
+
+struct INTON : formats::NoArg
+{
+	using formats::NoArg::NoArg;
+};
+
+struct INTRET : formats::NoArg
+{
+	using formats::NoArg::NoArg;
+};
+
+struct INTWAIT : formats::NoArg
+{
+	using formats::NoArg::NoArg;
+};
+
 struct Unknown
 {
 	Instruction raw;
@@ -718,6 +738,10 @@ using AnyInstruction = std::variant<
 	BSLI,
 	BSRITLSB,
 	BASRI,
+	INTOFF,
+	INTON,
+	INTRET,
+	INTWAIT,
 	Unknown
 >;
 
@@ -796,6 +820,10 @@ inline std::string disassemble(const AnyInstruction& insn)
 		[&](BSLI x) { return fmt::format("bsli(a_dst={}, b={})", rn(x.a_dst), x.b); },
 		[&](BSRITLSB x) { return fmt::format("bsri_tlsb(a_dst={}, b={})", rn(x.a_dst), x.b); },
 		[&](BASRI x) { return fmt::format("basri(a_dst={}, b={})", rn(x.a_dst), x.b); },
+		[&](INTOFF x) { return fmt::format("intoff()"); },
+		[&](INTON x) { return fmt::format("inton()"); },
+		[&](INTRET x) { return fmt::format("intret()"); },
+		[&](INTWAIT x) { return fmt::format("intwait()"); },
 		[&](Unknown x) { return fmt::format("uint32_t({:#010x})", x.raw); },
 
 	}, insn);
@@ -876,6 +904,10 @@ inline AnyInstruction decode(u32 insn)
 	if (o7 == 0b1101'0000) { return BSLI(insn); }
 	if (o7 == 0b1101'0010) { return BSRITLSB(insn); }
 	if (o7 == 0b1101'0100) { return BASRI(insn); }
+	if (o8 == 0b1110'0000) { return INTOFF(insn); }
+	if (o8 == 0b1110'0001) { return INTON(insn); }
+	if (o8 == 0b1110'0010) { return INTRET(insn); }
+	if (o8 == 0b1110'0011) { return INTWAIT(insn); }
 	return Unknown();
 }
 

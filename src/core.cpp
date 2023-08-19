@@ -16,10 +16,10 @@ void Core::dispatch()
 	{
 		auto [fetch_state, first_word] = mmu.get_u16(rip);
 
-		if (fetch_state != AccessStatus::Ok)
+		if (fetch_state != AccessStatus::Ok) [[unlikely]]
 		{
-			// TODO: more details
-			throw std::runtime_error{"Opcode fetch failed"};
+			fire_exception("Opcode fetch failed (u16 #1)");
+			return;
 		}
 
 		current_instruction = first_word;
@@ -28,10 +28,10 @@ void Core::dispatch()
 	{
 		auto [fetch_state, second_word] = mmu.get_u16(rip + 2);
 
-		if (fetch_state != AccessStatus::Ok)
+		if (fetch_state != AccessStatus::Ok) [[unlikely]]
 		{
-			// TODO: more details
-			throw std::runtime_error{"Opcode fetch of 2nd u16 fetch failed"};
+			fire_exception("Opcode fetch failed (u16 #2)");
+			return;
 		}
 
 		*current_instruction |= second_word << 16;
@@ -240,8 +240,32 @@ void Core::dispatch()
 			regs[x.a_dst] = s32(regs[x.a_dst]) >> x.b;
 			rip += 2;
 		},
-		[&](Unknown) { throw std::runtime_error("Illegal opcode"); },
-		[&](auto op) { throw std::runtime_error("Unimplemented opcode"); },
+		[&](INTOFF x) {
+			interrupts.enabled = false;
+			rip += 2;
+		},
+		[&](INTON x) {
+			interrupts.enabled = true;
+			rip += 2;
+		},
+		[&](INTRET x) {
+			interrupts.enabled = true;
+			rip = interrupts.intret;
+			rip += 2;
+		},
+		[&](INTWAIT x) {
+			if (!interrupts.enabled)
+			{
+				throw std::runtime_error{
+					"Core waiting for interrupt but interrupts are disabled"
+				};
+			}
+
+			throw std::runtime_error{"Waiting for interrupts unimplemented"};
+			rip += 2;
+		},
+		[&](Unknown) { fire_exception("Illegal instruction"); },
+		[&](auto op) { fire_exception("Unimplemented instruction"); },
 	}, decoded_ins);
 
 	// std::cout << debug_state() << '\n';
@@ -285,6 +309,37 @@ void Core::boot()
 	}
 }
 
+auto Core::fire_interrupt(Word id) -> bool
+{
+	if (!interrupts.enabled)
+	{
+		return false;
+	}
+
+	interrupts.enabled = false;
+	interrupts.intret = rip;
+
+	// TODO: magic constants begone
+	const Word address = (0x00001000 + id * 16);
+
+	rip = address;
+
+	return true;
+}
+
+void Core::fire_exception(std::string_view reason)
+{
+	if (!fire_interrupt(0)) [[unlikely]]
+	{
+		throw std::runtime_error{
+			fmt::format(
+				"{} (interrupts disabled)",
+				reason
+			)
+		};
+	}
+}
+
 auto Core::check_access_or_fault(AccessStatus status) -> bool
 {
 	if (status == AccessStatus::Ok)
@@ -292,10 +347,7 @@ auto Core::check_access_or_fault(AccessStatus status) -> bool
 		return true;
 	}
 
-	// TODO: proper interrupt handling
-	throw std::runtime_error{
-		std::string(access_status_strings.at(int(status)))
-	};
+	fire_exception(access_status_strings.at(int(status)));
 }
 
 auto Core::debug_state_multiline() const -> std::string

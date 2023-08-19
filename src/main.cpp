@@ -139,7 +139,7 @@ auto main(int argc, char** argv) -> int
 	{
 		const std::string error = fmt::format(
 			"{}{}\n{}{}\n",
-			"Emulator crashed with error: ",
+			"Uncaught error: ",
 			e.what(),
 			oopsie_woopsie(),
 			core.debug_state_multiline()

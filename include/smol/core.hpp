@@ -18,6 +18,12 @@ struct RegisterFile
 	auto operator[](RegisterId id) const -> const Word& { return data.at(std::size_t(id)); }
 };
 
+struct InterruptState
+{
+	bool enabled = false;
+	Word intret = 0;
+};
+
 struct Core
 {
 	RegisterFile       regs;
@@ -25,6 +31,7 @@ struct Core
 	u32                rip = 0;
 	bool               t_bit = false;
 	Mmu                mmu;
+	InterruptState     interrupts = {};
 
 	std::size_t executed_ops = 0;
 
@@ -36,6 +43,9 @@ struct Core
 
 	void dispatch();
 	void boot();
+
+	bool fire_interrupt(Word id);
+	void fire_exception(std::string_view reason = "");
 
 	[[nodiscard]] auto check_access_or_fault(AccessStatus status) -> bool;
 

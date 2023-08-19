@@ -542,3 +542,15 @@ def bsri_tlsb(a_dst: Reg, b: int | Absolute):
 
 def basri(a_dst: Reg, b: int | Absolute):
     return InsR4I5(0b1101_0100, r=a_dst, imm=Immediate(b, False, 0))
+
+def intoff():
+    return RawInsU16(0b1110_0000_0000_0000)
+
+def inton():
+    return RawInsU16(0b1110_0001_0000_0000)
+
+def intret():
+    return RawInsU16(0b1110_0010_0000_0000)
+
+def intwait():
+    return RawInsU16(0b1110_0011_0000_0000)
