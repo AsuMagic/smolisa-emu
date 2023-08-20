@@ -135,4 +135,4 @@ asm.at(0x0000, [
 ])
 
 if __name__ == "__main__":
-    asm.to_rom(2048 * 1024)
+    asm.to_rom()

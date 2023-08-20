@@ -3,6 +3,7 @@ from .label import *
 from .register import *
 
 import sys
+from typing import Optional
 
 def required_alignment(offset: int, to: int):
     if offset % to == 0:
@@ -13,6 +14,7 @@ def required_alignment(offset: int, to: int):
 class Asm:
     def __init__(self):
         self.sequences = []
+        self.sequence_ends = []
         self.labels = {}
 
     def at(self, rom_address, contents):
@@ -67,12 +69,15 @@ class Asm:
 
         assert False, f"Immediate type {type(imm)} failed to be resolved"
 
-    def as_bytes(self, size):
-        rom = bytearray([0x00 for i in range(size)])
-
+    def as_bytes(self, size: Optional[int] = None):
         # TODO: detect sequence overlaps
 
-        self._find_labels()
+        self._pre_pass()
+
+        if size is None:
+            size = max(self.sequence_ends)
+
+        rom = bytearray([0x00 for i in range(size)])
         
         for seq_offset, seq in self.sequences:
             offset = seq_offset
@@ -102,11 +107,12 @@ class Asm:
         
         return rom
 
-    def to_rom(self, rom_size=65536):
+    def to_rom(self, rom_size: Optional[int] = None):
         sys.stdout.buffer.write(self.as_bytes(rom_size))
 
-    def _find_labels(self):
-        for seq_offset, seq in self.sequences:
+    def _pre_pass(self):
+        self.sequence_ends = [0] * len(self.sequences)
+        for i, (seq_offset, seq) in enumerate(self.sequences):
             offset = seq_offset
 
             for token in seq:
@@ -114,3 +120,5 @@ class Asm:
                     self.set_label(offset, token.name)
                 
                 offset += self.token_len(token, offset)
+
+            self.sequence_ends[i] = offset

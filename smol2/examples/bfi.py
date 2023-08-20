@@ -158,9 +158,8 @@ asm.at(0x0000_0000, [
             iaddsi_tnz(reg_depth, -1), # --depth
             c_ji("FindStartLoop"), # if depth != 0: loop back
             j(reg_fallback_addr), # depth == 0, thus break out, and let ip inc
-])
 
-asm.at(0x1000, [
+    Align(4),
     Label("Literals"),
     (0xF0002000).to_bytes(4, byteorder="little"), # [0]
 
@@ -168,11 +167,12 @@ asm.at(0x1000, [
     (0xF0002FD1).to_bytes(4, byteorder="little"), # [1]
 
     (0xF0002F9F).to_bytes(4, byteorder="little"), # [2]
+
+    Align(4),
     Label("DispatchJT"),
     *make_jump_table(),
-])
-
-asm.at(0x3000, [
+    
+    Align(4),
     Label("BFProgram"),
     bf_source.encode("ascii"),
 ])
