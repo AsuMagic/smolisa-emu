@@ -1,1 +1,1 @@
-from .instruction import *
+from .entities import *

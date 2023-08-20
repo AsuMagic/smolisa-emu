@@ -1,4 +1,4 @@
-from .instruction import *
+from .entities import *
 from .label import *
 from .register import *
 

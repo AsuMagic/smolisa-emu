@@ -1,5 +1,4 @@
-from smol2.asm.assembler import *
-import smol2.asm.macros as m
+from smol2.asm import *
 
 asm = Asm()
 
