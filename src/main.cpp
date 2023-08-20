@@ -129,7 +129,7 @@ auto main(int argc, char** argv) -> int
 		FrameBuffer::normal_color
 	);
 
-	fmt::print(stderr, "Booting CPU at {:#10x}\n", core.rip);
+	fmt::print(stderr, "Booting CPU at {:#010x}\n", core.rip);
 
 	try
 	{
