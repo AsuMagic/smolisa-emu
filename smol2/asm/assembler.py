@@ -3,23 +3,24 @@ from .label import *
 from .register import *
 
 import sys
-from typing import Optional
+from typing import Any, List, Optional, Iterable
 
-def required_alignment(offset: int, to: int):
-    if offset % to == 0:
-        return 0
+@dataclass
+class Sequence:
+    contents: Iterable[Any]
+    location: Optional[int] = None
 
-    return to - offset % to
+    computed_end: Optional[int] = None
 
 class Asm:
     def __init__(self):
-        self.sequences = []
-        self.sequence_ends = []
+        self.sequences: List[Sequence] = []
         self.labels = {}
 
-    def at(self, rom_address, contents):
-        self.sequences.append((rom_address, contents))
-    
+    def __iadd__(self, seq: Sequence):
+        self.sequences.append(seq)
+        return self
+
     def set_label(self, address, name):
         if name in self.labels:
             raise ValueError(
@@ -42,6 +43,8 @@ class Asm:
             return token
         elif isinstance(token, Align):
             return bytes([0] * required_alignment(offset, token.to))
+        elif isinstance(token, LinkTimeExpression):
+            return token.expr(offset, self)
         else:
             assert False
 
@@ -56,6 +59,8 @@ class Asm:
             return 4
         elif isinstance(token, Align):
             return required_alignment(offset, token.to)
+        elif isinstance(token, LinkTimeExpression):
+            return token.expanded_len
         else:
             assert False
 
@@ -75,14 +80,16 @@ class Asm:
         self._pre_pass()
 
         if size is None:
-            size = max(self.sequence_ends)
+            size = max(seq.computed_end for seq in self.sequences) # type: ignore
 
+        size: int
         rom = bytearray([0x00 for i in range(size)])
         
-        for seq_offset, seq in self.sequences:
-            offset = seq_offset
+        for seq in self.sequences:
+            assert seq.location is not None
+            offset = seq.location
 
-            for token in seq:
+            for token in seq.contents:
                 if isinstance(token, Label):
                     continue
 
@@ -111,14 +118,23 @@ class Asm:
         sys.stdout.buffer.write(self.as_bytes(rom_size))
 
     def _pre_pass(self):
-        self.sequence_ends = [0] * len(self.sequences)
-        for i, (seq_offset, seq) in enumerate(self.sequences):
-            offset = seq_offset
+        self.sequences = sorted(
+            self.sequences,
+            key=lambda seq: seq.location if seq.location is not None else 0xFFFFFFFF
+        )
 
-            for token in seq:
+        offset = 0
+
+        for seq in self.sequences:
+            if seq.location is None:
+                seq.location = offset
+            else:
+                offset = seq.location
+
+            for token in seq.contents:
                 if isinstance(token, Label):
                     self.set_label(offset, token.name)
                 
                 offset += self.token_len(token, offset)
 
-            self.sequence_ends[i] = offset
+            seq.computed_end = offset

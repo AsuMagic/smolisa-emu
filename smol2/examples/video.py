@@ -1,5 +1,7 @@
 from smol2.asm import *
 
+from itertools import groupby
+
 asm = Asm()
 
 palette_white = 0x0011
@@ -22,7 +24,7 @@ with open(video_path, "rb") as f:
 num_frames = len(video_bytes) // (80 * 25)
 wait_for = 1 * 30 # frames
 
-asm.at(0x0000, [
+asm += Sequence([
     liprel(rpl, "Literals"),
 
     pl_l32(reg_fb_stop_address, 8),
@@ -121,10 +123,10 @@ asm.at(0x0000, [
 
     Align(4),
     Label("Literals"),
-    (0xF0002001).to_bytes(4, byteorder="little"), # [0] fb start (color)
-    (0xF0002FD0).to_bytes(4, byteorder="little"), # [1] vsync
-    (0xF0002FA1).to_bytes(4, byteorder="little"), # [2] fb end
-    (0xF0002000).to_bytes(4, byteorder="little"), # [3] fb start
+    bytes_u32(0xF0002001), # [0] fb start (color)
+    bytes_u32(0xF0002FD0), # [1] vsync
+    bytes_u32(0xF0002FA1), # [2] fb end
+    bytes_u32(0xF0002000), # [3] fb start
 
     Label("PrintedMeta1"),
     f"Assembled from {video_path} ({num_frames} frames)".encode("utf-8"),
@@ -132,7 +134,7 @@ asm.at(0x0000, [
     Align(4),
     Label("Video"),
     video_bytes
-])
+], location=0)
 
 if __name__ == "__main__":
     asm.to_rom()

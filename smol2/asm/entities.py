@@ -1,6 +1,7 @@
 import abc
 from dataclasses import dataclass, fields
 from enum import Enum
+from typing import Callable
 
 from .register import *
 from .label import *
@@ -25,6 +26,11 @@ class Absolute:
 @dataclass
 class Align:
     to: int
+
+@dataclass
+class LinkTimeExpression:
+    expr: Callable[[int, "Asm"], bytes]
+    expanded_len: int
 
 def is_access_valid(reg: Reg, access_method: RegAccessMode) -> bool:
     if access_method == RegAccessMode.R2:
