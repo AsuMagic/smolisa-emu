@@ -36,5 +36,7 @@ know if it redundant with RelWithDebInfo builds, though.
 - `-DLLVM_PARALLEL_LINK_JOBS=4` limits the number of linker jobs. Realistically
 it probably could be set even lower. Linking is very memory intensive with large
 debug builds so you run out very fast and hit swap otherwise.
+- `-DLLVM_USE_SPLIT_DWARF=1` splits debug info in a separate file from binaries
+and object files which allegedly improve compile (link?) times a fair bit.
 - `-DBUILD_SHARED_LIBS=OFF` is the default. `ON` has the potential of reducing
 the total binary size but I encountered a linking error I couldn't figure out.
