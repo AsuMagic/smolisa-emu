@@ -15,7 +15,7 @@ Courtesy of george:
     - Link to the main commit that does most of the bring-up work: https://github.com/andresag01/llvm-project/commit/274cfea0f9662f0ed49f6132b0424323d0b11750#diff-c5ed19018c245547bf7fda59838e8bd5589e30bd9463930fc6ae0b2576184caa
 - Didn't check yet: https://github.com/lowRISC/riscv-llvm
 - Someone's "LLVM development diary", fairly short but explains a few issues that I encountered http://mups16.net/pages/llvm-development-diary.html
-- Slides, describes the big picture, compile process, includes things like branching (2014) https://llvm.org/devmtg/2014-04/PDFs/Talks/Building%20an%20LLVM%20backend.pdf
+- Slides, describes the big picture, compile/lowering process (2014) https://llvm.org/devmtg/2014-04/PDFs/Talks/Building%20an%20LLVM%20backend.pdf
 
 ### Configuring the CMake project
 
