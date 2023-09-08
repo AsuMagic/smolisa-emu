@@ -1,6 +1,44 @@
 #include <stdint.h>
 
+#ifdef __SMOL__
+#include <string.h>
+#include <stdint.h>
+
+typedef struct __attribute__((packed))
+{
+    uint8_t r, g, b;
+} RgbColor;
+
+typedef struct __attribute__((packed))
+{
+    char c;
+    uint8_t col;
+} FbEntry;
+
+typedef struct __attribute__((packed))
+{
+    FbEntry chars[80*25];
+    RgbColor palette[16];
+    volatile char vsync_hit;
+} Framebuffer;
+
+Framebuffer *const FRAMEBUFFER_DEVICE = (Framebuffer*)(0xF0002000);
+
+void write_char(char c)
+{
+    static int cur_idx = 0;
+
+    FRAMEBUFFER_DEVICE->chars[cur_idx].c = c;
+
+    ++cur_idx;
+    if (cur_idx >= 80*25)
+    {
+        cur_idx = 0;
+    }
+}
+#else
 void write_char(char c);
+#endif
 
 #define DISPATCH() { ++ip; goto *jt[program[ip]]; }
 

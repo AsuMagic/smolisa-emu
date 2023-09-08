@@ -517,6 +517,16 @@ struct TNE : formats::TestRegReg
 	using formats::TestRegReg::TestRegReg;
 };
 
+struct TGTU : formats::TestRegReg
+{
+	using formats::TestRegReg::TestRegReg;
+};
+
+struct TGTS : formats::TestRegReg
+{
+	using formats::TestRegReg::TestRegReg;
+};
+
 struct TLTSI : formats::TestRegI4
 {
 	using formats::TestRegI4::TestRegI4;
@@ -535,11 +545,6 @@ struct TEI : formats::TestRegI4
 struct TNEI : formats::TestRegI4
 {
 	using formats::TestRegI4::TestRegI4;
-};
-
-struct TBZ : formats::TestReg
-{
-	using formats::TestReg::TestReg;
 };
 
 struct PLL32 : formats::PoolLoad
@@ -732,11 +737,12 @@ using AnyInstruction = std::variant<
 	TGES,
 	TE,
 	TNE,
+	TGTU,
+	TGTS,
 	TLTSI,
 	TGESI,
 	TEI,
 	TNEI,
-	TBZ,
 	PLL32,
 	J,
 	CJ,
@@ -814,11 +820,12 @@ inline std::string disassemble(const AnyInstruction& insn)
 		[&](TGES x) { return fmt::format("tges(a={}, b={})", rn(x.a), rn(x.b)); },
 		[&](TE x) { return fmt::format("te(a={}, b={})", rn(x.a), rn(x.b)); },
 		[&](TNE x) { return fmt::format("tne(a={}, b={})", rn(x.a), rn(x.b)); },
+		[&](TGTU x) { return fmt::format("tgtu(a={}, b={})", rn(x.a), rn(x.b)); },
+		[&](TGTS x) { return fmt::format("tgts(a={}, b={})", rn(x.a), rn(x.b)); },
 		[&](TLTSI x) { return fmt::format("tltsi(a={}, b={})", rn(x.a), x.b); },
 		[&](TGESI x) { return fmt::format("tgesi(a={}, b={})", rn(x.a), x.b); },
 		[&](TEI x) { return fmt::format("tei(a={}, b={})", rn(x.a), x.b); },
 		[&](TNEI x) { return fmt::format("tnei(a={}, b={})", rn(x.a), x.b); },
-		[&](TBZ x) { return fmt::format("tltsi(a={})", rn(x.a)); },
 		[&](PLL32 x) { return fmt::format("pl_l32(dst={}, offset={})", rn(x.dst), x.offset); },
 		[&](J x) { return fmt::format("j(target={})", rn(x.target)); },
 		[&](CJ x) { return fmt::format("c_j(target={})", rn(x.target)); },
@@ -898,11 +905,12 @@ inline AnyInstruction decode(u32 insn)
 	if (o8 == 0b0111'0111) { return TGES(insn); }
 	if (o8 == 0b0111'1000) { return TE(insn); }
 	if (o8 == 0b0111'1001) { return TNE(insn); }
-	if (o8 == 0b0111'1010) { return TLTSI(insn); }
-	if (o8 == 0b0111'1011) { return TGESI(insn); }
-	if (o8 == 0b0111'1100) { return TEI(insn); }
-	if (o8 == 0b0111'1101) { return TNEI(insn); }
-	if (o8 == 0b0111'1110) { return TBZ(insn); }
+	if (o8 == 0b0111'1010) { return TGTU(insn); }
+	if (o8 == 0b0111'1011) { return TGTS(insn); }
+	if (o8 == 0b0111'1100) { return TLTSI(insn); }
+	if (o8 == 0b0111'1101) { return TGESI(insn); }
+	if (o8 == 0b0111'1110) { return TEI(insn); }
+	if (o8 == 0b0111'1111) { return TNEI(insn); }
 	if (o4 == 0b1000'0000) { return PLL32(insn); }
 	if (o8 == 0b1001'0000) { return J(insn); }
 	if (o8 == 0b1001'0001) { return CJ(insn); }

@@ -159,28 +159,33 @@ def tne(a: Reg, b: Reg):
     """Sets the `T`-bit to `1` if `a != b` or to `0` otherwise"""
     return InsR4R4(0b0111_1001, a, b)
 
+def tgtu(a: Reg, b: Reg):
+    """Sets the `T`-bit to `1` if `a > b` (unsigned comparison), or to `0`
+    otherwise"""
+    return InsR4R4(0b0111_1010, a, b)
+
+def tgts(a: Reg, b: Reg):
+    """Sets the `T`-bit to `1` if `a > b` (signed comparison), or to `0`
+    otherwise"""
+    return InsR4R4(0b0111_1011, a, b)
+
 def tltsi(a: Reg, b_imm: int | Absolute):
     """Sets the `T`-bit to `1` if `a < b` (signed comparison), or to `0`
     otherwise"""
-    return InsR4I4(0b0111_1010, a, imm=Immediate(b_imm, signed=True))
+    return InsR4I4(0b0111_1100, a, imm=Immediate(b_imm, signed=True))
 
 def tgesi(a: Reg, b_imm: int | Absolute):
     """Sets the `T`-bit to `1` if `a >= b` (signed comparison), or to `0`
     otherwise"""
-    return InsR4I4(0b0111_1011, a, imm=Immediate(b_imm, signed=True))
+    return InsR4I4(0b0111_1101, a, imm=Immediate(b_imm, signed=True))
 
 def tei(a: Reg, b_imm: int | Absolute):
     """Sets the `T`-bit to `1` if `a == b` or to `0` otherwise"""
-    return InsR4I4(0b0111_1100, a, imm=Immediate(b_imm, signed=True))
+    return InsR4I4(0b0111_1110, a, imm=Immediate(b_imm, signed=True))
 
 def tnei(a: Reg, b_imm: int | Absolute):
     """Sets the `T`-bit to `1` if `a != b` or to `0` otherwise"""
-    return InsR4I4(0b0111_1101, a, imm=Immediate(b_imm, signed=True))
-
-def tbz(a: Reg):
-    """Sets the `T`-bit to `1` if any of the 4 bytes in `a` is `== 0` or to `0`
-    otherwise"""
-    return InsR4(0b0111_1110, a)
+    return InsR4I4(0b0111_1111, a, imm=Immediate(b_imm, signed=True))
 
 def pl_l32(dst: Reg, off: int | Absolute):
     """Literal pool load; Loads `u32` from memory at `rpl + off` to `dst`"""

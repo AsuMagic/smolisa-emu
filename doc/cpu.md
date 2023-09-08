@@ -163,12 +163,12 @@ The `T` bit is manipulated by certain arithmetic and test instructions.
 | `01110111` | R4R4    | `tges(a:R4, b:R4)`                 | **T**est if **g**reater or **e**qual (**s**igned)     | `T <- (s32(a) >= s32(b))`                              |
 | `01111000` | R4R4    | `te(a:R4, b:R4)`                   | **T**est if **e**qual to                              | `T <- (a == b)`                                        |
 | `01111001` | R4R4    | `tne(a:R4, b:R4)`                  | **T**est if **n**ot **e**qual to                      | `T <- (a != b)`                                        |
-| `01111010` | R4I4    | `tltsi(a:R4, b:I4)`                | **T**est if **l**ower **t**han **s**igned **i**mm.    | `T <- (s32(a) < s32(b))`                               |
-| `01111011` | R4I4    | `tgesi(a:R4, b:I4)`                | **T**est if **g**reater or **e**qual (**s**igned)     | `T <- (s32(a) >= s32(b))`                              |
-| `01111100` | R4I4    | `tei(a:R4, b:I4)`                  | **T**est if **e**qual to **i**mmediate                | `T <- (a == b)`                                        |
-| `01111101` | R4I4    | `tnei(a:R4, b:I4)`                 | **T**est if **n**ot **e**qual to **i**mmediate        | `T <- (a != b)`                                        |
-| `01111110` | R4      | `tbz(a:R4)`                        | **T**est if any **b**yte is **z**ero                  | TODO                                                   |
-| `01111111` |         |                                    |                                                       |                                                        |
+| `01111010` | R4R4    | `tgtu(a:R4, b:R4)`                 | **T**est if **l**ower **t**han (**u**nsigned)         | `T <- (a > b)`                                         |
+| `01111011` | R4R4    | `tgts(a:R4, b:R4)`                 | **T**est if **l**ower **t**han (**s**igned)           | `T <- (s32(a) > s32(b))`                               |
+| `01111100` | R4I4    | `tltsi(a:R4, b:I4)`                | **T**est if **l**ower **t**han **s**igned **i**mm.    | `T <- (s32(a) < s32(b))`                               |
+| `01111101` | R4I4    | `tgesi(a:R4, b:I4)`                | **T**est if **g**reater or **e**qual (**s**igned)     | `T <- (s32(a) >= s32(b))`                              |
+| `01111110` | R4I4    | `tei(a:R4, b:I4)`                  | **T**est if **e**qual to **i**mmediate                | `T <- (a == b)`                                        |
+| `01111111` | R4I4    | `tnei(a:R4, b:I4)`                 | **T**est if **n**ot **e**qual to **i**mmediate        | `T <- (a != b)`                                        |
 |            |         |                                    | _**Pool loads**_                                      |                                                        |
 | `1000----` | W4I8    | `pl_l32(dst:R4, imm:U8)`           | r**pl**: **L**oad u**32** from memory with off <=1K   | `dst <- mem32(rpl + (u32(imm) << 2))`                  |
 |            |         |                                    | _**Branching and conditional ops**_                   |                                                        |

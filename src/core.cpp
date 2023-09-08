@@ -154,9 +154,11 @@ void Core::execute_single()
 		[&](TGES x) { t_bit = s32(regs[x.a]) >= s32(regs[x.b]); },
 		[&](TE x) { t_bit = regs[x.a] == regs[x.b]; },
 		[&](TNE x) { t_bit = regs[x.a] != regs[x.b]; },
+		[&](TGTU x) { t_bit = regs[x.a] > regs[x.b]; },
+		[&](TGTS x) { t_bit = s32(regs[x.a]) > s32(regs[x.b]); },
 		[&](TLTSI x) { t_bit = s32(regs[x.a]) < s32(x.b); },
 		[&](TGESI x) { t_bit = s32(regs[x.a]) >= s32(x.b); },
-		[&](TBZ x) {
+		/*[&](TBZ x) {
 			const auto v = regs[x.a]; 
 			t_bit = (
 				((v & 0x00'00'00'FF) == 0) ||
@@ -164,7 +166,7 @@ void Core::execute_single()
 				((v & 0x00'FF'00'00) == 0) ||
 				((v & 0xFF'00'00'00) == 0)
 			);
-		},
+		},*/
 		[&](TEI x) { t_bit = regs[x.a] == x.b; },
 		[&](TNEI x) { t_bit = regs[x.a] != x.b; },
 
