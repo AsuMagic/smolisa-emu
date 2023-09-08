@@ -8,7 +8,7 @@ Documentation and tooling for my toy "smol2" 32-bit CPU architecture.
 - [Emulator source](src/)
 - [Source code for the Python-based assembler](smol2/asm/)
 - [Assembly examples & demos](smol2/examples/)
-- [WIP, undocumented LLVM backend](https://github.com/asumagic/llvm-project/tree/smol2)
+- [🔗 WIP, undocumented LLVM backend](https://github.com/asumagic/llvm-project/tree/smol2)
 
 ## Compiling the emulator (*nix)
 
