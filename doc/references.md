@@ -19,15 +19,15 @@ Courtesy of george:
 
 ### Configuring the CMake project
 
-My cmake line: `cmake -S llvm -B build -G Ninja -DLLVM_ENABLE_PROJECTS="clang;lld" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=/opt/llvm-smol2 -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_TARGETS_TO_BUILD="" -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD="Smol" -DLLVM_USE_LINKER=mold -DLLVM_OPTIMIZED_TABLEGEN=ON -DLLVM_PARALLEL_LINK_JOBS=4 -DLLVM_ENABLE_ASSERTIONS=1 -DLLVM_USE_SPLIT_DWARF=1 -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER="clang++" -DBUILD_SHARED_LIBS=OFF`
+My cmake line: `cmake -S llvm -B build -G Ninja -DLLVM_ENABLE_PROJECTS="clang;lld" -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=/opt/llvm-smol2 -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_TARGETS_TO_BUILD="" -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD="Smol" -DLLVM_USE_LINKER=mold -DLLVM_OPTIMIZED_TABLEGEN=ON -DLLVM_PARALLEL_LINK_JOBS=4 -DLLVM_ENABLE_ASSERTIONS=1 -DLLVM_USE_SPLIT_DWARF=1 -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER="clang++" -DBUILD_SHARED_LIBS=1 -DLLVM_CCACHE_BUILD=1`
 
 Breakdown:
 
 - `-DLLVM_ENABLE_PROJECTS="clang;lld"` to build clang+lld
-- `-DCMAKE_BUILD_TYPE=RelWithDebInfo` for a build with optimizations and debug
-info. Note that LLVM developers recommend using Debug, but I went with this
-anyway. Bear in mind that RelWithDebInfo disables some things by default, e.g.
-assertions, which are restored by other flags I specified.
+- `-DCMAKE_BUILD_TYPE=Debug` for a debug build. You can use `RelWithDebInfo`,
+but you will probably get worse stack traces on crash. Build types with
+optimizations use less disk space (thus are faster to link) but this is mostly
+mitigated by other things here.
 - `-DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD="Smol"` is needed because in order to
 use your target with `-DLLVM_TARGETS_TO_BUILD`, it would need to be specified as
 a stable target in the CMake configuration.
@@ -37,8 +37,12 @@ lightweight at linking than the stock `ld`.
 know if it redundant with RelWithDebInfo builds, though.
 - `-DLLVM_PARALLEL_LINK_JOBS=4` limits the number of linker jobs. Realistically
 it probably could be set even lower. Linking is very memory intensive with large
-debug builds so you run out very fast and hit swap otherwise.
+debug builds so you run out very fast and hit swap otherwise. `mold` should also
+be parallelizing in the first place, but I don't know if this flags tries to
+affect this.
 - `-DLLVM_USE_SPLIT_DWARF=1` splits debug info in a separate file from binaries
 and object files which allegedly improve compile (link?) times a fair bit.
-- `-DBUILD_SHARED_LIBS=OFF` is the default. `ON` has the potential of reducing
-the total binary size but I encountered a linking error I couldn't figure out.
+- `-DBUILD_SHARED_LIBS=ON` is only recommended for build environments. It
+reduces disk space and link time quite significantly but you may encounter
+compile errors if you didn't specify link dependencies in various CMakeLists
+correctly.
