@@ -271,8 +271,8 @@ TODO
 
 Enables paletted text rendering.
 
-- `0x2000`..`0x2F9F`: FbChar[80][25] - framebuffer data
-- `0x2FA0`..`0x2FCF`: RgbColor[16] - palette data
+- `0x2000`..`0x2F9F`: `FbChar[25][80]` - framebuffer data
+- `0x2FA0`..`0x2FCF`: `RgbColor[16]` - palette data
 - `0x2FD0`: any write causes a vsync wait
 
 FbChar bit layout:
