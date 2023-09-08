@@ -46,3 +46,5 @@ and object files which allegedly improve compile (link?) times a fair bit.
 reduces disk space and link time quite significantly but you may encounter
 compile errors if you didn't specify link dependencies in various CMakeLists
 correctly.
+- `-DLLVM_CCACHE_BUILD=1` enables ccache for the build, can help with
+incremental build times.
