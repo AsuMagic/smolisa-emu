@@ -1,0 +1,2 @@
+## `isBareSymbolRef`
+Lots of encoding definitions use `isBareSymbolRef` -- should investigate what exactly this does, it seems related to special kind of values (e.g. pcrel/lo24/hi8) and if so probably is not correct or is overkill to use for certain kind of immediates.
