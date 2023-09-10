@@ -24,7 +24,7 @@ typedef struct __attribute__((packed))
 
 Framebuffer *const FRAMEBUFFER_DEVICE = (Framebuffer*)(0xF0002000);
 
-void write_char(char c)
+inline void write_char(char c)
 {
     static int cur_idx = 0;
 
@@ -40,14 +40,14 @@ void write_char(char c)
 void write_char(char c);
 #endif
 
-#define DISPATCH() { ++ip; goto *jt[program[ip]]; }
+#define DISPATCH() { ++ip; goto *jt[*ip]; }
 
 void bfi(
     const char* restrict program,
     char* restrict tape
 ) {
-    int ip = 0;
-    int sp = 0;
+    const char* ip = program;
+    char* sp = tape;
 
     const static void** const jt[128] = {
         [0 ... 127] = &&dispatch,
@@ -60,14 +60,15 @@ void bfi(
         [']'] = &&opLoopEnd
     };
 
-    goto *jt[program[ip]];
-    dispatch:
-        goto *jt[program[++ip]];
+    goto *jt[*ip];
+    dispatch: __builtin_unreachable();
+        while (*jt[*(++ip)] != &&dispatch) {}
+        goto *jt[*ip];
     opInc:
-        ++tape[sp];
+        ++(*sp);
         DISPATCH();
     opDec:
-        --tape[sp];
+        --(*sp);
         DISPATCH();
     opR:
         ++sp;
@@ -76,19 +77,19 @@ void bfi(
         --sp;
         DISPATCH();
     opWrite:
-        write_char(tape[sp]);
+        write_char(*sp);
         DISPATCH();
     opLoopStart:
-        if (tape[sp] == 0) {
+        if ((*sp) == 0) {
             int depth = 0;
             for (;;)
             {
                 ++ip;
-                if (program[ip] == '[')
+                if (*ip == '[')
                 {
                     ++depth;
                 }
-                else if (program[ip] == ']')
+                else if (*ip == ']')
                 {
                     --depth;
                     if (depth == 0)
@@ -97,20 +98,20 @@ void bfi(
                     }
                 }
             }
-            goto *jt[program[ip]];
+            goto *jt[*ip];
         }
         DISPATCH();
     opLoopEnd:
-        if (tape[sp] != 0) {
+        if ((*sp) != 0) {
             int depth = 0;
             for (;;)
             {
                 --ip;
-                if (program[ip] == ']')
+                if (*ip == ']')
                 {
                     ++depth;
                 }
-                else if (program[ip] == '[')
+                else if (*ip == '[')
                 {
                     --depth;
                     if (depth == 0)
@@ -119,7 +120,7 @@ void bfi(
                     }
                 }
             }
-            goto *jt[program[ip]];
+            goto *jt[*ip];
         }
         DISPATCH();
 }
