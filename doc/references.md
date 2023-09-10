@@ -16,6 +16,7 @@ Courtesy of george:
 - Didn't check yet: https://github.com/lowRISC/riscv-llvm
 - Someone's "LLVM development diary", fairly short but explains a few issues that I encountered http://mups16.net/pages/llvm-development-diary.html
 - Slides, describes the big picture, compile/lowering process (2014) https://llvm.org/devmtg/2014-04/PDFs/Talks/Building%20an%20LLVM%20backend.pdf
+- Intro on pattern matching https://eli.thegreenplace.net/2013/02/25/a-deeper-look-into-the-llvm-code-generator-part-1
 
 ### Configuring the CMake project
 
